@@ -1,21 +1,25 @@
 import DanbooruUrls from "../lib/BaseUrls";
+import page from "@/app/post/page";
 
 class ControllerApi {
 
 
   async GetPost(url) {
-    let urls = process.env.URL_POST;
-    if (url.includes("?")) {
+    try {
+      let urls = process.env.URL_POST;
+
       const queryString = url.split("?")[1];
       const dataSplitUrl = queryString ? queryString.split("&") : [];
       const queryParams = dataSplitUrl.reduce((acc, param) => {
         const [key, value] = param.split("=");
-        acc[decodeURIComponent(key)] = decodeURIComponent(value || "");
+        acc[key] = value || "";
         return acc;
       }, {});
-      const { tags, page, limit } = queryParams;
-      const updatedTags = tags.includes('rating:safe') ? tags.replace('rating:safe', 'rating:general') : tags;
-      if (tags) {
+
+      const { tags, page, limit, includeOffset } = queryParams;
+      const updatedTags = tags && tags.includes('rating:safe') ? tags.replace('rating:safe', 'rating:general') : tags;
+
+      if (updatedTags) {
         urls += `&tags=${updatedTags}`;
       }
       if (page) {
@@ -24,54 +28,76 @@ class ControllerApi {
       if (limit) {
         urls += `&limit=${limit}`;
       }
-    }
-    try {
+
+      console.log(queryParams); // Corrected logging
+      console.log(urls); // Corrected logging
+
       const response = await fetch(`${DanbooruUrls}${urls}`);
-      const data = await response.json();
-      console.log(data.post === undefined);
-      
-      if (data.post === undefined) {
-        throw {code: 404}
+      if (!response.ok) {
+        throw { code: response.code }; // Handle non-200 responses
       }
-      return data
+
+      const data = await response.json();
+      console.log(data)
+      if (!data || !data.post) { // Check for the expected structure
+        throw { code: 404 };
+      }
+      if(includeOffset){
+        return data
+      }
+
+      return data.post;
     } catch (err) {
-      throw err
+      console.log(err); // Log the error for debugging
+      throw err;
     }
   }
 
   async GetTags(url) {
     try {
-      console.log(url);
       const queryString = url.split("?")[1];
       const dataSplitUrl = queryString ? queryString.split("&") : [];
       const queryParams = dataSplitUrl.reduce((acc, param) => {
         const [key, value] = param.split("=");
-        acc[decodeURIComponent(key)] = decodeURIComponent(value || "");
+        acc[key] = value || "";
         return acc;
       }, {});
       let urls = process.env.URL_TAGS;
-      const { names,limit,orderBy,order } = queryParams;
+      const { names,limit,orderBy,order,search, includeOffset,page } = queryParams;
       if (names) {
-        urls += `&names=${names}`; 
+        urls += `&names=${names}`;
       }
       if (limit) {
-        urls += `&limit=${limit}`; 
+        urls += `&limit=${limit}`;
       }
       if (orderBy) {
         urls += `&orderBy=${orderBy}`
-      }  
+      }  ``
       if (order) {
         urls += `&order=${order}`
-      } 
-      const res = await fetch(`${DanbooruUrls}${urls}`)      
+      }
+      if (search) {
+        urls += `&name_pattern=%${search}%`
+      }
+      if (page){
+        urls += `&pid=${page}`
+      }
+      const res = await fetch(`${DanbooruUrls}${urls}`)
+      if (!res.ok) {
+        throw {code: 403}
+      }
       const data = await res.json()
-      console.log(data);
-      
       if (!data.tag) {
         throw { code: 404 }
       }
-      return data
+
+      if(includeOffset){
+        return data
+      }else {
+      return data.tag
+      }
     } catch (err) {
+      console.log(err)
       throw err
     }
   }
