@@ -5,7 +5,7 @@ export async function GET(req) {
   const reqUrl = req.url;  
   try {
     const data = await ControllerApi.GetPost(reqUrl)
-    return NextResponse.json(data.post, { status: 200 });
+    return NextResponse.json(data, { status: 200 });
   } catch (error) {
     return NextResponse.json(errorHandle(error))
   }
