@@ -1,5 +1,7 @@
 import type { NextConfig } from "next";
+import { withNextVideo } from 'next-video/process';
 
+/** @type {import('next').NextConfig} */
 const nextConfig: NextConfig = {
   /* config options here */
         env: {
@@ -7,10 +9,9 @@ const nextConfig: NextConfig = {
         },
 
     images: {
-        domains: ['img3.gelbooru.com', 'gelbooru.com']
+        domains: ['img3.gelbooru.com', 'gelbooru.com','video-cdn1.gelbooru.com']
     },
-
 
 };
 
-export default nextConfig;
+export default withNextVideo(nextConfig);

@@ -104,13 +104,16 @@ class ControllerApi {
 
   async GetPostId(id) {
     try {
+      if (!id){
+        throw { code: 404 };
+      }
       let urls = process.env.URL_POST_ID + id;
       const res = await fetch(`${DanbooruUrls}${urls}`)
       const data = await res.json()
       if (!data) {
         throw {code: 404}
       }
-      return data
+      return data.post
     } catch (err) {
       throw err
     }

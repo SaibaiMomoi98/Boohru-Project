@@ -2,17 +2,33 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* Custom variants for dark and light themes */
+/*@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));*/
+/*@custom-variant light (&:where([data-theme=light], [data-theme=light] *));*/
 
-@media (prefers-color-scheme: dark) {
-  :root {
-   
-  }
-}
+/* Define CSS variables for light and dark themes */
+/*:root {*/
+/*  --background: #F3EAE3; !* Light background *!*/
+/*  --foreground: #010101; !* Light foreground *!*/
+/*}*/
 
-body {
-  
-}
+
+/*[data-theme='dark'] {*/
+/*  --background: "oklch(0.408 0.153 2.432)"; !* Dark background *!*/
+/*  --foreground: #959595; !* Dark foreground *!*/
+/*}*/
+
+
+/*!* Apply the background and foreground colors to the body *!*/
+/*body {*/
+/*  background-color: var(--background);*/
+/*  color: var(--foreground);*/
+/*}*/
+
+/*!* Additional styles for dark mode *!*/
+/*@media (prefers-color-scheme: dark) {*/
+/*  :root {*/
+/*    !*--background: #E4CDD5; !* Dark background *!*!*/
+/*    !*--foreground: #E4CDD5; !* Dark foreground *!*!*/
+/*  }*/
+/*}*/
