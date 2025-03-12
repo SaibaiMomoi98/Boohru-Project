@@ -8,15 +8,21 @@ import {CircularPagination} from "@/components/Pagination";
 import LoadingComp from "@/components/LoadingComp";
 import {fetchTags} from "@/Helper/FetchTags";
 import RenderTags from "@/components/RenderTags";
+import {FetchPosts} from "@/Helper/FetchPost";
+import {useDispatch, useSelector} from "react-redux";
+import {setCachePosts, setCacheTags} from "@/lib/cacheSlice/cacheSlice";
+import {encodeHtmlEntity} from "@/Helper/encodeDecodeHtmlTags";
 // import {router} from "next/client";
 
 const Page = () => {
+    const dispatch = useDispatch();
+    const {cachePosts, cacheTags} = useSelector((state) => state.cache);
     const searchParams = useSearchParams()
     const router = useRouter();
     const pathname = usePathname()
     const [prefStorage, setPrefStorage] = useState({})
-    const [loading, setLoading] = useState(false)
-    const [cachePosts, setCachePosts] = useState([])
+    const [loading, setLoading] = useState(true)
+    // const [cachePosts, setCachePosts] = useState([])
     const [pagination, setPagination] = useState({
         currentPage: 1,
         totalPages: 0,
@@ -38,11 +44,34 @@ const Page = () => {
 
 
     useEffect(() => {
+        const cacheRaw = sessionStorage.getItem("c");
         const shouldFetch = prefStorage.limit !== undefined && prefStorage.rating !== undefined;
-        if (shouldFetch) {
+
+        // if (cacheRaw) {
+        //     console.log("masuk cache")
+        //     setLoading(true);
+
+            // setTimeout(() => {
+                // const cache = verifyToken(cacheRaw);
+                //
+                // if (cache.currentPage !== p && shouldFetch || s !== cache.search) {
+                //     sessionStorage.removeItem("c");
+                //     fetchPosts();
+                // } else {
+                //     setPosts(cache.data);
+                //     setRelativeTags(cache.tags);
+                //     setPagination(prev => ({ ...prev, totalPages: cache.pages }));
+                //     const cacheid = cache.data?.post?.map(post => post.id) || [];
+                //     dispatch(setCachePosts(cacheid));
+                //     setLoading(false);
+                // }
+            // }, 300);
+        // } else
+            if (shouldFetch) {
             fetchPosts();
         }
     }, [s, pagination.currentPage, prefStorage.limit, prefStorage.rating]);
+
 
 
     useEffect(() => {
@@ -50,6 +79,11 @@ const Page = () => {
             setPagination(prev => ({...prev, currentPage: Number(p)}));
         }
     }, [searchParams]);
+
+    useEffect(() => {
+        console.log("Redux State:", cachePosts); // Debugging: Check if state updates
+    }, [cachePosts]);
+
 
 
     const setPrefStorageFunc = () => {
@@ -68,59 +102,36 @@ const Page = () => {
         }
     };
 
-    const currentPageFunc = () => {
-        if (pagination.currentPage !== Number(p)) {
-            setPagination(prev => ({...prev, currentPage: p}));
-        }
-    };
-
-
 
 
     const fetchPosts = async () => {
-        let urlPost = '/post.json?includeOffset=true';
         setLoading(true);
-        console.log(s)
-        const decodedSearch = decodeURIComponent(s);
-        const search = decodedSearch.split(" ").map((item) => {
-            return encodeURIComponent(item);
-        }).join("+");
         try {
-            if (s || s === "" || !s) {
-                urlPost += `&tags=${!s ? "" : search}${prefStorage.rating === "safe" ? "+rating:safe" : ""}`;
-            }
-            if (prefStorage.limit) {
-                urlPost += `&limit=${prefStorage.limit}`;
-            }
-            const response = await fetch(`${urlPost}&page=${pagination.currentPage}`);
-            console.log(`${urlPost}&page=${pagination.currentPage}`)
-            const data = await response.json();
-            console.log(data)
+            const { data, tags } = await FetchPosts(s, pagination, prefStorage, pathname);
             setPosts(data);
-            const tags = await fetchTags(data, s, prefStorage);
             setRelativeTags(tags);
-            const cache = []
-            const datapost = data?.post?.forEach((post, index)=> {
-            cache.push(post.id)
-            })
-            setCachePosts(cache)
+
+            const cacheid = data?.post?.map(post => post.id) || [];
+            dispatch(setCachePosts(cacheid));
+            // setCacheTags
             const attributes = data['@attributes'];
+            let pages
             if (attributes) {
-                const pages = Math.ceil(Number(attributes.count) / Number(attributes.limit));
-                setPagination(prev => ({...prev, totalPages: pages}));
+                pages = Math.ceil(Number(attributes.count) / Number(attributes.limit));
+                setPagination(prev => ({ ...prev, totalPages: pages }));
             }
+            const cache = {data, tags, pages, currentPage: p || pagination.currentPage, search: encodeHtmlEntity(s)};
+            const tokenCache = signToken(cache);
+            sessionStorage.setItem("c", tokenCache);
         } catch (error) {
+            sessionStorage.removeItem("c");
             console.error(error);
         } finally {
             setLoading(false);
         }
     };
     const goToPostDetails = (id) => {
-        if (cachePosts){
-            const stringToken = signToken({id: cachePosts});
-            localStorage.setItem("c", stringToken);
-        }
-        router.push(`/post/${id}${s ? "?s=" + s : ""}`);
+        router.push(`/post/${id}${s ? "?s=" + encodeURIComponent(s): ""}`);
     }
 
 

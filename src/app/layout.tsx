@@ -3,6 +3,7 @@ import {Geist, Geist_Mono} from "next/font/google";
 import "./globals.css";
 import NavbarComponents from "@/components/NavbarComponents";
 import ThemeProvider from "@/components/ThemeProvider";
+import {StoreProvider} from "@/app/StoreProvider";
 
 
 const geistSans = Geist({
@@ -26,6 +27,8 @@ export default function RootLayout({
     children: React.ReactNode;
 }>) {
     return (
+        <StoreProvider>
+
         <html lang="en">
         <body
             className={`${geistSans.variable} ${geistMono.variable} antialiased `}
@@ -40,5 +43,6 @@ export default function RootLayout({
         </ThemeProvider>
         </body>
         </html>
+        </StoreProvider>
     );
 }

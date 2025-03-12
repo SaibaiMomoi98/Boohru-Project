@@ -5,7 +5,6 @@ export async function GET(req, { params }) {
   const id = (await params).id
 
   try {
-    console.log(id)
     const data = await ControllerApi.GetPostId(id)
     return NextResponse.json(data, { status: 200 });
   } catch (error) {

@@ -10,24 +10,14 @@ const s = searchParams.get("s");
 const p = searchParams.get("p");
 
     useEffect(() => {
-        // const currentPage = sessionStorage.getItem("palakbapakkao");
-        // if (currentPage) {
-        //     const currentPageToken = verifyToken(currentPage);
-        //     if (Number(currentPageToken) && Number(currentPageToken) <= pages) {
-        //         setActive(Number(currentPageToken));
-        //     }
-        // }
         if (p){
             setActive(Number(p))
         }
     }, [pages]);
-
+    2
     const changePagination = (page) => {
-        // const pageHash = signToken(page);
-        // sessionStorage.setItem("palakbapakkao", pageHash);
-        // setActive(page);
         setActive(page);
-        router.push(`${pathname}?${s ? "s=" + s + "&" : ""}p=${page}`);
+        router.push(`${pathname}?${s ? "s=" + encodeURIComponent(s) + "&" : ""}p=${page}`);
     };
 
 

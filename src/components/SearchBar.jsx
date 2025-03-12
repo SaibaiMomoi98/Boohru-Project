@@ -2,6 +2,7 @@
 import React, {useEffect, useState} from 'react';
 import {signToken, verifyToken} from "@/middleware/hash";
 import {usePathname, useRouter, useSearchParams} from 'next/navigation'
+import {decodeHtmlEntity} from "@/Helper/encodeDecodeHtmlTags";
 
 const SearchBar = (props) => {
     const [searchTerm, setSearchTerm] = useState([]);
@@ -20,20 +21,33 @@ const SearchBar = (props) => {
     const searchParams = useSearchParams()
     const s = searchParams.get("s")
 
-    console.log(pathname)
+
+    // console.log(pathname)
     const fetchData = async () => {
         try {
             const filterEmptyStringArray = searchTerm.filter((item) => {
                 return (item !== (undefined, null, ""));
             })
             let res;
+            console.log(filterEmptyStringArray)
             if (revised.isTrue) {
                 res = await fetch(`/tags.json/?search=${encodeURIComponent(filterEmptyStringArray[revised.whichIndex])}&limit=10&orderBy=count&order=desc`);
             } else {
                 res = await fetch(`/tags.json/?search=${encodeURIComponent(filterEmptyStringArray[filterEmptyStringArray.length - 1])}&limit=10&orderBy=count&order=desc`);
             }
             const json = await res.json();
-            setFectTags(json);
+            // const tags = json.data.tags;
+            console.log(json)
+            const decodedSearch = json?.map((item) => {
+                return {
+                    ...item,
+                    name: decodeHtmlEntity(item.name)
+                }
+
+
+            } )
+            // console.log(decodedSearch);
+            setFectTags(decodedSearch);
         } catch (error) {
             console.log(error);
         }
