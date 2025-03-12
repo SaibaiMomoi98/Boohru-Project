@@ -65,7 +65,7 @@ const SearchBar = (props) => {
         }
         if (pathname === "/post") {
            // window.location.reload();
-           sessionStorage.removeItem("palakbapakkao");
+           // sessionStorage.removeItem("palakbapakkao");
         }
     }
 

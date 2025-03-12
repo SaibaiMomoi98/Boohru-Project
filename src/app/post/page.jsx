@@ -47,26 +47,26 @@ const Page = () => {
         const cacheRaw = sessionStorage.getItem("c");
         const shouldFetch = prefStorage.limit !== undefined && prefStorage.rating !== undefined;
 
-        // if (cacheRaw) {
-        //     console.log("masuk cache")
-        //     setLoading(true);
+        if (cacheRaw) {
+            console.log("masuk cache")
+            setLoading(true);
 
-            // setTimeout(() => {
-                // const cache = verifyToken(cacheRaw);
-                //
-                // if (cache.currentPage !== p && shouldFetch || s !== cache.search) {
-                //     sessionStorage.removeItem("c");
-                //     fetchPosts();
-                // } else {
-                //     setPosts(cache.data);
-                //     setRelativeTags(cache.tags);
-                //     setPagination(prev => ({ ...prev, totalPages: cache.pages }));
-                //     const cacheid = cache.data?.post?.map(post => post.id) || [];
-                //     dispatch(setCachePosts(cacheid));
-                //     setLoading(false);
-                // }
-            // }, 300);
-        // } else
+            setTimeout(() => {
+                const cache = verifyToken(cacheRaw);
+
+                if (cache.currentPage !== p && shouldFetch || s !== cache.search) {
+                    sessionStorage.removeItem("c");
+                    fetchPosts();
+                } else {
+                    setPosts(cache.data);
+                    setRelativeTags(cache.tags);
+                    setPagination(prev => ({ ...prev, totalPages: cache.pages }));
+                    const cacheid = cache.data?.post?.map(post => post.id) || [];
+                    dispatch(setCachePosts(cacheid));
+                    setLoading(false);
+                }
+            }, 300);
+        } else
             if (shouldFetch) {
             fetchPosts();
         }
@@ -113,7 +113,7 @@ const Page = () => {
 
             const cacheid = data?.post?.map(post => post.id) || [];
             dispatch(setCachePosts(cacheid));
-            // setCacheTags
+            // dispatch(setCacheTags()
             const attributes = data['@attributes'];
             let pages
             if (attributes) {

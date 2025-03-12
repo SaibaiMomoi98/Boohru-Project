@@ -85,13 +85,18 @@ function Page(props) {
     useEffect(() => {
         // console.log(arrayId);
         // console.log(post)
-        console.log(cachePost, "postss cache")
-        if (!cachePost || Object.keys(cachePost).length === 0){
-            router.push("/");
-        } else if (cachePost) {
-    const currentIndex = arrayId?.indexOf(Number(params.id));
-            setCurrentIndex(currentIndex);
+        const cacheRaw = sessionStorage.getItem("c");
+        if (cacheRaw) {
+            const cache = verifyToken(cacheRaw);
+            console.log(cache)
         }
+        console.log(cachePost, "postss cache")
+    //     if (!cachePost || Object.keys(cachePost).length === 0){
+    //         router.push("/");
+    //     } else if (cachePost) {
+    // const currentIndex = arrayId?.indexOf(Number(params.id));
+    //         setCurrentIndex(currentIndex);
+    //     }
     }, [arrayId]);
 
     useEffect(() => {
