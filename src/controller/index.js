@@ -29,16 +29,13 @@ class ControllerApi {
         urls += `&limit=${limit}`;
       }
 
-      console.log(queryParams); // Corrected logging
-      console.log(urls); // Corrected logging
-
       const response = await fetch(`${DanbooruUrls}${urls}`);
       if (!response.ok) {
         throw { code: response.code }; // Handle non-200 responses
       }
 
       const data = await response.json();
-      console.log(data)
+      console.log(`${DanbooruUrls}${urls}`)
       if (!data || !data.post) { // Check for the expected structure
         throw { code: 404 };
       }
@@ -91,6 +88,7 @@ class ControllerApi {
         throw { code: 404 }
       }
 
+
       if(includeOffset){
         return data
       }else {
@@ -104,13 +102,16 @@ class ControllerApi {
 
   async GetPostId(id) {
     try {
+      if (!id){
+        throw { code: 404 };
+      }
       let urls = process.env.URL_POST_ID + id;
       const res = await fetch(`${DanbooruUrls}${urls}`)
       const data = await res.json()
       if (!data) {
         throw {code: 404}
       }
-      return data
+      return data.post
     } catch (err) {
       throw err
     }

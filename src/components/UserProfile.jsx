@@ -1,98 +1,80 @@
 import React from "react";
-import {
-    Avatar,
-    Button,
-    Menu,
-    MenuHandler,
-    MenuItem,
-    MenuList,
-    Typography,
-} from "@material-tailwind/react";
-import {
-    Cog6ToothIcon,
-    InboxArrowDownIcon,
-    LifebuoyIcon,
-    PowerIcon,
-    UserCircleIcon,
-} from "@heroicons/react/24/solid";
+import { useRouter } from "next/navigation";
 
-// profile menu component
+// Profile menu component
 const profileMenuItems = [
-    {
-        label: "My Profile",
-        icon: UserCircleIcon,
-    },
-    {
-        label: "Edit Profile",
-        icon: Cog6ToothIcon,
-    },
-    {
-        label: "Inbox",
-        icon: InboxArrowDownIcon,
-    },
-    {
-        label: "Help",
-        icon: LifebuoyIcon,
-    },
-    {
-        label: "Sign Out",
-        icon: PowerIcon,
-    },
+    { label: "My Profile" },
+    { label: "Settings" },
+    { label: "Inbox" },
+    { label: "Help" },
+    { label: "Sign Out" },
+];
+
+const profileMenuItems2 = [
+    { label: "Sign in" },
+    { label: "Login" },
+    { label: "Settings" },
+    { label: "Help" },
 ];
 
 export function UserProfile() {
+    const router = useRouter();
     const [isMenuOpen, setIsMenuOpen] = React.useState(false);
+    const [login, setLogin] = React.useState(false);
 
-    const closeMenu = () => setIsMenuOpen(false);
+    const closeMenu = (label) => {
+        if (label === "Settings") {
+            router.push('/settings');
+        }
+        setIsMenuOpen(false);
+    };
+
+    const menuListItems = () => {
+        const items = login ? profileMenuItems : profileMenuItems2;
+        return items.map(({ label }, key) => {
+            const isLastItem = key === items.length - 1;
+            return (
+                <div
+                    key={label}
+                    onClick={() => closeMenu(label)}
+                    className={`flex items-center gap-2 rounded p-2 cursor-pointer ${
+                        isLastItem ? "text-red-500" : ""
+                    } hover:bg-gray-200`}
+                >
+                    <span>{label}</span>
+                </div>
+            );
+        });
+    };
 
     return (
-        <Menu open={isMenuOpen} handler={setIsMenuOpen} placement="bottom-end">
-            <MenuHandler>
-                <Button
-                    variant="text"
-                    color="blue-gray"
-                    className="flex items-center rounded-full p-0"
-                >
-                    <Avatar
-                        variant="circular"
-                        size="md"
-                        alt="profile"
-                        withBorder={true}
-                        color="blue-gray"
-                        className=" p-0.5"
-                        // src="https://docs.material-tailwind.com/img/face-2.jpg"
-                    />
-                </Button>
-            </MenuHandler>
-            <MenuList className="p-1 bg-pink-800 rounded-lg border-pink-500 text-white">
-                {profileMenuItems.map(({ label, icon }, key) => {
-                    const isLastItem = key === profileMenuItems.length - 1;
-                    return (
-                        <MenuItem
-                            key={label}
-                            onClick={closeMenu}
-                            className={`flex items-center gap-2 rounded ${
-                                isLastItem
-                                    ? "hover:bg-red-500/10 focus:bg-red-500/10 active:bg-red-500/10"
-                                    : "hover:bg-red-500/10 focus:bg-red-500/10 active:bg-red-500/10"
-                            }`}
-                        >
-                            {React.createElement(icon, {
-                                className: `h-4 w-4 ${isLastItem ? "text-red-500" : ""}`,
-                                strokeWidth: 2,
-                            })}
-                            <Typography
-                                as="span"
-                                variant="small"
-                                className="font-normal"
-                                color={isLastItem ? "red" : "inherit"}
-                            >
-                                {label}
-                            </Typography>
-                        </MenuItem>
-                    );
-                })}
-            </MenuList>
-        </Menu>
+        <div className="relative">
+            <div>
+                {login ? (
+                    <button
+                        className="flex items-center rounded-full p-2 bg-gray-300"
+                        onClick={() => setIsMenuOpen(!isMenuOpen)}
+                    >
+                        <img
+                            src="https://via.placeholder.com/40" // Placeholder for avatar
+                            alt="profile"
+                            className="rounded-full"
+                        />
+                    </button>
+                ) : (
+                    <button
+                        className="flex items-center rounded-full p-2 bg-gray-300"
+                        onClick={() => setLogin(true)} // Simulate login
+                    >
+                        Login
+                    </button>
+                )}
+            </div>
+            {isMenuOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-white border rounded-lg shadow-lg z-10">
+                    {menuListItems()}
+                </div>
+            )}
+        </div>
     );
-}``
+}
