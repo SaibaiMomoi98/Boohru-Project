@@ -1,26 +1,21 @@
-import React from 'react';
-import {useRouter} from "next/navigation";
+import Link from "next/link";
 
-function RenderTags({relativeTags}) {
-    const router = useRouter()
-    const handleChangePage = (name) => {
-        router.push(`/post?s=${name}&p=1`);
-        router.refresh()
-    }
-
+export default function RenderTags({ relativeTags }) {
     const renderTags = (tagsArray, colorClass) => {
         return tagsArray.map((item, index) => (
-            <div key={index} onClick={() => handleChangePage(item.name)}
-                 className={`h-[4vh] flex flex-row items-center rounded-lg p-1 text-center hover:bg-pink-600 hover:cursor-pointer ${colorClass}`}>
-                <a className="text-[10px]">{item?.name.split("_").join(" ")}</a>
-            </div>
+            <Link
+                key={index}
+                href={`/post?s=${encodeURIComponent(item.name)}&p=1`}
+                className={`h-[4vh] flex flex-row items-center rounded-lg p-1 text-center hover:bg-pink-600 hover:cursor-pointer ${colorClass}`}
+            >
+                <span className="text-[10px]">{item?.name.split("_").join(" ")}</span>
+            </Link>
         ));
     };
 
     const renderRelativeTags = () => {
         const tagComponents = [];
 
-        // Check each key in relativeTags
         for (const [key, value] of Object.entries(relativeTags)) {
             const colorClass = {
                 creator: "bg-green-400 text-green-900",
@@ -29,17 +24,12 @@ function RenderTags({relativeTags}) {
                 genre: "bg-pink-400 text-pink-900"
             }[key];
 
-            // Slice if length is greater than 35
             const tagsToRender = value.length > 35 ? value.slice(0, 35) : value;
-
-            // Push the rendered tags to the tagComponents array
             tagComponents.push(renderTags(tagsToRender, colorClass));
         }
 
         return tagComponents;
     };
 
-    return renderRelativeTags()
+    return <div className="flex flex-wrap gap-2">{renderRelativeTags()}</div>;
 }
-
-export default RenderTags;

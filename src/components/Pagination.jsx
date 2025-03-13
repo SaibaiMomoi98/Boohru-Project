@@ -14,7 +14,7 @@ const p = searchParams.get("p");
             setActive(Number(p))
         }
     }, [pages]);
-    2
+
     const changePagination = (page) => {
         setActive(page);
         router.push(`${pathname}?${s ? "s=" + encodeURIComponent(s) + "&" : ""}p=${page}`);
