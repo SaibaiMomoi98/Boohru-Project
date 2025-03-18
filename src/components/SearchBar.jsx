@@ -3,14 +3,18 @@ import React, {useEffect, useState} from 'react';
 import {signToken, verifyToken} from "@/middleware/hash";
 import {usePathname, useRouter, useSearchParams} from 'next/navigation'
 import {decodeHtmlEntity} from "@/Helper/encodeDecodeHtmlTags";
+import {useDispatch, useSelector} from "react-redux";
+import {setPrefStorage, setPrefStorageRaw} from "@/lib/prefStorage/PrefStorage";
 
 const SearchBar = (props) => {
+const dispatch = useDispatch();
     const [searchTerm, setSearchTerm] = useState([]);
     const [arrValue, setArrValue] = useState([]);
     const [fectTags, setFectTags] = useState([]);
-    const [prefStorage, setPrefStorage] = useState('');
+    // const [prefStorage, setPrefStorage] = useState('');
     const [isOpen, setIsOpen] = useState(false);
     const router = useRouter()
+    const {prefStorage} = useSelector((state) => state.pref);
     const pathname = usePathname()
     const [refreshed, setRefreshed] = useState(true);
     const [revised, setRevised] = useState({
@@ -29,7 +33,7 @@ const SearchBar = (props) => {
                 return (item !== (undefined, null, ""));
             })
             let res;
-            console.log(filterEmptyStringArray)
+            // console.log(filterEmptyStringArray)
             if (revised.isTrue) {
                 res = await fetch(`/tags.json/?search=${encodeURIComponent(filterEmptyStringArray[revised.whichIndex])}&limit=10&orderBy=count&order=desc`);
             } else {
@@ -45,7 +49,7 @@ const SearchBar = (props) => {
                 }
 
 
-            } )
+            })
             // console.log(decodedSearch);
             setFectTags(decodedSearch);
         } catch (error) {
@@ -58,14 +62,18 @@ const SearchBar = (props) => {
             return encodeURIComponent(item);
         });
         const querySearch = encodedSearchTerm.join("+");
-        if (querySearch === ""){
+        const searchPref = {search: querySearch , ...prefStorage};
+        // console.log(searchPref)
+        const stringPref = signToken(searchPref);
+        sessionStorage.setItem("pref", stringPref);
+        if (querySearch === "") {
             router.push(`/post?p=${1}`);
-        }else{
-        router.push(`/post?s=${querySearch}&p=${1}`)
+        } else {
+            router.push(`/post?s=${querySearch}&p=${1}`)
         }
         if (pathname === "/post") {
-           // window.location.reload();
-           // sessionStorage.removeItem("palakbapakkao");
+            // window.location.reload();
+            // sessionStorage.removeItem("palakbapakkao");
         }
     }
 
@@ -87,17 +95,41 @@ const SearchBar = (props) => {
             debounce(fetchData(), 1500);
         }
 
-            if (s) {
-                console.log(s, "searchnya");
-                // Decode the search parameter without replacing '+'
-                const decodedSearch = decodeURIComponent(s);
-                const array = decodedSearch.split(" ");
-                setArrValue(array);
+        if (s) {
+            console.log(s !== prefStorage.search, "searchnya");
+            if (s !== prefStorage.search) {
+            const searchPref = {search: s, rating: prefStorage.rating, limit: prefStorage.limit};
+            console.log(searchPref, "apt atp")
+            const stringPref = signToken(searchPref);
+            sessionStorage.setItem("pref", stringPref);
             }
+            const decodedSearch = decodeURIComponent(s);
+            const array = decodedSearch.split(" ");
+            setArrValue(array);
+        }
+        if (!s && pathname !== "/post") {
+            const pref = sessionStorage.getItem("pref");
+            if (pref) {
+                const decodedPref = verifyToken(pref);
+                if (decodedPref?.search) {
+                    // Remove the search property from prefStorage
+                    const updatedPref = {...decodedPref};
+                    delete updatedPref.search;
 
-    }, []);
+                    // Update sessionStorage with the modified prefStorage
+                    const updatedPrefString = signToken(updatedPref);
+                    sessionStorage.setItem("pref", updatedPrefString);
 
+                    // Update Redux state
+                    dispatch(setPrefStorage(updatedPrefString));
+                }
+            }
+        }
+    }, [s, pathname]);
 
+    useEffect(() => {
+        console.log(prefStorage, "pref from seach")
+    }, [prefStorage]);
 
     useEffect(() => {
         if (searchTerm.length > 0) {
@@ -105,11 +137,10 @@ const SearchBar = (props) => {
         }
         if (sessionStorage.getItem("pref")) {
             const localCurrentStorage = sessionStorage.getItem("pref")
-            const currentPrevStorage = verifyToken(localCurrentStorage)
-            setPrefStorage(currentPrevStorage.tags);
+            dispatch(setPrefStorage(localCurrentStorage));
         }
-        if (arrValue.length === 0 && pathname === "/post" && prefStorage && refreshed) {
-            setArrValue(prefStorage.split("+").map((item) => decodeURIComponent(item)));
+        if (arrValue.length === 0 && pathname === "/post" && prefStorage.tags && refreshed) {
+            setArrValue(prefStorage.tags.split("+").map((item) => decodeURIComponent(item)));
         }
     }, [searchTerm]);
 
@@ -120,6 +151,7 @@ const SearchBar = (props) => {
 
     const handleOnChange = (e) => {
         const value = e.target.value;
+        console.log(value, "seacrh")
         const valueSplit = value.split(' ');
         setSearchTerm(valueSplit);
         setRefreshed(false);
@@ -171,7 +203,7 @@ const SearchBar = (props) => {
 
     return (
         <div className="relative">
-            <form className="max-w-md mx-auto" onSubmit={handleOnSubmit} autoComplete="off" >
+            <form className="max-w-md mx-auto" onSubmit={handleOnSubmit} autoComplete="off">
                 <label htmlFor="default-search"
                        className="mb-2 text-sm font-medium text-gray-900 sr-only dark:text-white">Search</label>
                 <div className="relative">

@@ -13,8 +13,8 @@ const p = searchParams.get("p");
         if (p){
             setActive(Number(p))
         }
-    }, [pages]);
-    2
+    }, [pages, p]);
+
     const changePagination = (page) => {
         setActive(page);
         router.push(`${pathname}?${s ? "s=" + encodeURIComponent(s) + "&" : ""}p=${page}`);

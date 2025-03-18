@@ -8,10 +8,8 @@ export const fetchTags = async (data, s, prefStorage, idParams) => {
         const rawTagsSet = data.post?.flatMap(el => el.tags ? el.tags.split(" ") : []) || [];
         const tagsSet = new Set(rawTagsSet);
         const arrayEncoded = [...tagsSet].map(item => decodeHtmlEntity(item));
-
-        // console.log(arrayEncoded.join("+"));
-        const MAX_TAGS = 900; // Set a limit for the number of tags
-        const limitedTags = arrayEncoded.slice(0, MAX_TAGS); // Take only the first MAX_TAGS
+        const MAX_TAGS = 900;
+        const limitedTags = arrayEncoded.slice(0, MAX_TAGS);
 
 
         // Fetch tags from the API

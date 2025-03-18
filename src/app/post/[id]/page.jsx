@@ -1,8 +1,8 @@
 "use client"
-import React, {useEffect} from 'react';
-import {useParams, useRouter} from "next/navigation";
+import React, {cache, useEffect} from 'react';
+import {useParams, useRouter, useSearchParams} from "next/navigation";
 import DanbooruUrls from "../../../lib/BaseUrls";
-import {verifyToken} from "../../../middleware/hash";
+import {signToken, verifyToken} from "../../../middleware/hash";
 import Image from "next/image";
 import Video from 'next-video';
 import LoadingComp from "../../../components/LoadingComp";
@@ -12,11 +12,15 @@ import VideoComp from "../../../components/VideoComp";
 import SearchBar from "../../../components/SearchBar";
 import {FetchPosts} from "../../../Helper/FetchPost";
 import {isNumber} from "node:util";
-import {useSelector} from "react-redux";
-
+import {useDispatch, useSelector} from "react-redux";
+import {setCachePosts} from "../../../lib/cacheSlice/cacheSlice";
+import {setPrefStorage} from "../../../lib/prefStorage/PrefStorage";
+import {encodeHtmlEntity} from "../../../Helper/encodeDecodeHtmlTags";
 
 function Page(props) {
+    const dispatch = useDispatch();
     const router = useRouter();
+    const {prefStorage} = useSelector((state) => state.pref);
     const params = useParams()
     const [post, setPost] = React.useState();
     const [arrayId, setArrayId] = React.useState([]);
@@ -24,10 +28,21 @@ function Page(props) {
     const [currentTags, setCurrentTags] = React.useState([]);
     const [relativeTags, setRelativeTags] = React.useState([]);
     const [relativePost, setRelativePost] = React.useState([]);
+    const [relativeData, setRelativeData] = React.useState({
+        currentPage:0,
+        search: "",
+    });
     const [currentIndex, setCurrentIndex] = React.useState(0);
+    const [lastId, setLastId] = React.useState(null);
+    const [nextId, setNextId] = React.useState(null);
+    const [hideButton, setHideButton] = React.useState({
+        next: false,
+        prev: false,
+    });
     const cachePost = useSelector((state) => state.cache.cachePosts);
+    const searchParams = useSearchParams()
+    const s = searchParams.get("s")
 
-    console.log(params.id)
     const fetchPostWithId = async (id) => {
         setLoading(true);
         try {
@@ -35,9 +50,8 @@ function Page(props) {
             const post = await data.json();
             setPost(post);
 
-            if (cachePost) {
-                setArrayId(cachePost);
-            }
+
+            console.log(cachePost, "cache post");
 
             const tags = await fetchTags(post, "", "", params.id);
             // console.log(tags);
@@ -45,13 +59,14 @@ function Page(props) {
             if (tags, tags.creator.length > 0 || tags.character.length > 0) {
                 // console.log(tags.creator[0].name);
                 const pref = sessionStorage.getItem("pref");
-                const prefStorage = verifyToken(pref);
+                // const prefStorage = verifyToken(pref);
+                dispatch(setPrefStorage(pref));
                 const creatorTag = tags.creator.length > 0 ? tags.creator[0].name : null;
                 const characterTag = tags.character.length > 0 ? tags.character[0].name : null;
 
-                // Use the first available tag for fetching related posts
-                const tagToUse = creatorTag || characterTag;
 
+                const tagToUse = creatorTag || characterTag;
+                console.log(prefStorage, 'prefstorage di fetchpostid')
                 if (tagToUse) {
                     const {data} = await FetchPosts(tagToUse, {currentPage: 0}, {
                         limit: 5,
@@ -66,11 +81,12 @@ function Page(props) {
                             rating: prefStorage.rating
                         }, "");
                         setRelativePost(data);
-
+                        setRelativeData((prev) => ({...prev, search: tagToUse, currentPage: randomPages}));
                     }
                 } else {
                     console.log("No valid tags found for fetching related posts.");
                 }
+
             }
         } catch (er) {
             console.log(er)
@@ -80,87 +96,287 @@ function Page(props) {
     }
 
 
+    const FetchFromIndex = async () => {
+        try {
+            console.log(currentIndex, "index sekarang");
+            console.log(currentIndex === 0, "mau ngefetch sebelum");
+            console.log(cachePost.search || relativeTags?.creator[0]?.name || relativeTags?.character[0]?.name, Number(cachePost.currentPage) - 1, prefStorage, "")
+            console.log(cachePost)
+
+            const searchKey = cachePost.search;
+            const currentPage = cachePost.currentPage;
+            const ratingKey = prefStorage.rating;
+
+            const existingCache = sessionStorage.getItem("c");
+            let cache = existingCache ? verifyToken(existingCache) : {};
+
+            // Check if the cache for the current rating and search term exists
+            if (!cache[ratingKey]) {
+                cache[ratingKey] = {};
+            }
+
+            if (!cache[ratingKey][searchKey]) {
+                cache[ratingKey][searchKey] = {
+                    pages: 0,
+                    cache: [],
+                };
+            }
+
+            const currentCache = cache[ratingKey][searchKey];
+            const cachePageKeys = currentCache.cache.map((entry) => Object.keys(entry)[0]);
+            // console.log(cachePageKeys.includes(), "current page cache");
+
+            // dispatch(setCachePosts({}));
+
+            const isPageCached = (pageToCheck) => {
+                return cachePageKeys.includes(pageToCheck.toString())
+            }
+
+            if (currentIndex === 0) { //prevPost
+                // s, pagination, prefStorage, pathname
+                if (cachePost.currentPage === 0) {
+                    setHideButton((prev) => ({...prev, prev: true}))
+                    return none;
+                } else {
+                    let previousPage = Number(cachePost.currentPage) - 1
+                    const {data} = await FetchPosts(
+                        cachePost.search || relativeTags?.creator[0]?.name || relativeTags?.character[0]?.name, {currentPage: previousPage}, prefStorage, false)
+                    // console.log(data)
+                    // dispatch(setCachePosts(data));
+                    // const signToken()
+
+                    const checkPage = isPageCached(previousPage);
+                    if (!checkPage) {
+                        currentCache.cache.push({
+                            [previousPage]: {data},
+                        })
+                        const stringNextCache = signToken(currentCache)
+                        sessionStorage.setItem("c", stringNextCache)
+
+                    }
+
+
+                    const prevId = data.post.map((el, i) => el.id)
+                    const lastFetchedId = prevId[prevId.length - 1];
+
+
+                    console.log(prevId, lastFetchedId, "prev")
+
+                    if (lastFetchedId) {
+                        setLastId(lastFetchedId);
+                    }
+
+
+                }
+            } else if (currentIndex === arrayId.length - 1) { //next post
+                if (arrayId.length < prefStorage.limit) {
+                    setHideButton((prev) => ({...prev, next: true}))
+                    return none;
+                }
+                let nextPage = Number(cachePost.currentPage) + 1;
+                const {data} = await FetchPosts(cachePost.search || relativeTags?.creator[0]?.name || relativeTags?.character[0]?.name, {currentPage: nextPage}, prefStorage, false);
+                const checkCachePage = isPageCached(nextPage)
+                if (!checkCachePage) {
+                    currentCache.cache.push({
+                        [nextPage]: {data},
+                    })
+
+                    // console.log(currentCache, "cache updated")
+                    const stringNextCache = signToken(currentCache)
+                    sessionStorage.setItem("c", stringNextCache)
+                }
+                // console.log(checkCachePage, "check next page cached")
+                const nextId = data.post.map((el, i) => el.id)
+                const nextFetchedId = nextId[0];
+                console.log(data, nextId, nextFetchedId, "masuk next page")
+                setNextId(nextFetchedId);
+            }
+        } catch (error) {
+            console.log(error)
+        }
+    }
+
+
     const isVideo = post && post[0]?.file_url?.endsWith('.mp4');
 
+    // useEffect(() => {
+    //     console.log(cachePost, "cache ini ")
+    //
+    // }, [cachePost]);
+
+
     useEffect(() => {
-        // console.log(arrayId);
-        // console.log(post)
+
         const cacheRaw = sessionStorage.getItem("c");
-        if (cacheRaw) {
+        const cacheIdRaw = sessionStorage.getItem("ci");
+
+
+        if (cacheRaw && cacheIdRaw) {
             const cache = verifyToken(cacheRaw);
-            console.log(cache)
+            const cacheId = verifyToken(cacheIdRaw);
+
+            console.log(cache, "cache");
+            console.log(cacheId, "cacheId");
+
+            const ratingKey = prefStorage.rating; // e.g., "safe" or "nsfw"
+            const searchKey = cacheId.search; // e.g., "character1" or "creator1"
+
+            // Check if the cache for the current rating and search term exists
+            if (cache[ratingKey] && cache[ratingKey][searchKey]) {
+                const searchCacheData = cache[ratingKey][searchKey];
+
+
+                const currentPagePost = searchCacheData.cache.find((el) => Number(Object.keys(el)) === Number(cacheId.currentPage));
+                console.log(cacheId.currentPage, "current Page")
+                console.log(searchCacheData.cache.find((el) => Number(Object.keys(el)) === Number(cacheId.currentPage)), "currentPagePost");
+
+                if (currentPagePost) {
+                    const {data} = currentPagePost[cacheId.currentPage];
+                    const arrayId = data.post.map((el) => el.id);
+
+                    // Find the index of the current post in the arrayId
+                    console.log(arrayId, "arrayId");
+                    const currentIndexCache = arrayId.indexOf(Number(params.id));
+                    if (currentIndexCache === -1) {
+                        console.log("masuk dulu")
+                    }
+                    console.log(currentIndexCache, "currentIndexCache");
+                    if (currentIndexCache !== -1) {
+                        setArrayId(arrayId);
+                        setCurrentIndex(currentIndexCache); // Update currentIndex here
+                        dispatch(setCachePosts(cacheId));
+
+                        console.log("Post data loaded from cache");
+                    }
+                }
+            }
+        } else {
+            router.push("/")
         }
-        console.log(cachePost, "postss cache")
-    //     if (!cachePost || Object.keys(cachePost).length === 0){
-    //         router.push("/");
-    //     } else if (cachePost) {
-    // const currentIndex = arrayId?.indexOf(Number(params.id));
-    //         setCurrentIndex(currentIndex);
-    //     }
-    }, [arrayId]);
+        if (prefStorage.rating) {
+            fetchPostWithId(params.id);
+        }
+
+    }, [params.id, prefStorage.rating]);
+    useEffect(() => {
+        const prefRaw = sessionStorage.getItem("pref");
+        if (prefRaw) {
+            dispatch(setPrefStorage(prefRaw));
+        }
+
+    }, [])
 
     useEffect(() => {
-        fetchPostWithId(params.id);
-    }, [params.id]);
+        console.log(loading, "loading")
+    }, [loading]);
 
+
+    // useEffect(() => {
+    //     console.log('Pref Storage:', prefStorage);
+    //     console.log('Cache Posts:', cachePosts);
+    // }, [prefStorage, cachePosts]);
 
     useEffect(() => {
-        if (isVideo) {
-            fetchVideo()
+        if (Object.keys(relativeTags).length > 0) {
+            if (relativeTags?.creator?.[0]?.name || relativeTags?.character?.[0]?.name) {
+                FetchFromIndex();
+            }
         }
-    }, [post]);
-
-
+    }, [relativeTags]);
 
     const handleChangePage = (action) => {
         if (isNumber(action)) {
             router.push(`/post/${action}`);
-        } else {
-
-            if (currentIndex === -1) return; // If the current id is not found in the array
-
-            let newIndex = currentIndex;
-            if (action === 'next') {
-                newIndex = Math.min(currentIndex + 1, arrayId.length - 1); // Move to the next index
-            } else if (action === 'previous') {
-                newIndex = Math.max(currentIndex - 1, 0); // Move to the previous index
+            if (relativeData){
+                console.log(relativeData, "relativeData");
+                const signTokenCi = signToken(relativeData);
+                sessionStorage.setItem("ci", signTokenCi);
             }
-            const newId = arrayId[newIndex]; // Get the new id
-            router.push(`/post/${newId}`); // Navigate to the new post
+            return;
         }
+
+        if (currentIndex === -1) return;
+
+        let newIndex = currentIndex;
+        let newId = arrayId[currentIndex];
+
+        if (action === "next") {
+            if (currentIndex === arrayId.length - 1) {
+                if (nextId) {
+                    console.log(nextId, "nextId")
+                    const cacheId = sessionStorage.getItem("ci");
+                    const cacheIdObj = verifyToken(cacheId);
+                    console.log(cacheIdObj, "cache id brr");
+                    const cache = {search: prefStorage.search, currentPage: Number(cachePost.currentPage) + 1};
+                    console.log(cache, "cache next");
+                    const string = signToken(cache);
+                    sessionStorage.setItem("ci", string);
+                    router.push(`/post/${nextId}${s ? "?s=" + encodeURIComponent(s) : ""}`);
+                    return;
+                }
+            } else {
+                newIndex = Math.min(currentIndex + 1, arrayId.length - 1);
+                newId = arrayId[newIndex];
+            }
+        } else if (action === "previous") {
+            if (currentIndex === 0) {
+                if (lastId) {
+                    const cacheId = sessionStorage.getItem("ci");
+                    const cacheIdObj = verifyToken(cacheId);
+                    console.log(cacheIdObj, "cache id brr");
+                    const cache = {
+                        search: prefStorage.search,
+                        currentPage: cacheIdObj.currentPage <= 1 ? 1 : Number(cachePost.currentPage) - 1
+                    };
+                    console.log(cache, "cache again");
+                    const string = signToken(cache);
+                    sessionStorage.setItem("ci", string);
+                    router.push(`/post/${lastId}${s ? "?s=" + encodeURIComponent(s) : ""}`);
+                    return;
+                } else {
+                    console.log("No previous posts available.");
+                    return;
+                }
+            } else {
+                newIndex = Math.max(currentIndex - 1, 0);
+                newId = arrayId[newIndex];
+            }
+        }
+
+        router.push(`/post/${newId}${s ? "?s=" + encodeURIComponent(s) : ""}`);
     };
 
     const directToVideo = (video) => {
         window.location.assign(`${video}`)
     }
 
-    const fetchVideo = async () => {
-        try {
-            // Use the CORS proxy to fetch the video
-            const proxyUrl = 'http://localhost:8080/';
-            const videoUrl = post[0]?.file_url; // Get the video URL from the post
-            const res = await fetch(`${proxyUrl}${videoUrl}`, {
-                method: 'GET',
-                headers: {
-                    'Origin': window.location.origin, // Set the origin header
-                    'X-Requested-With': 'XMLHttpRequest' // This header is also required
-                }
-            });
-
-            if (!res.ok) {
-                throw new Error('Network response was not ok');
-            }
-
-
-            const videoBlob = await res.blob();
-            // console.log(res.url);
-            const videoObjectUrl = URL.createObjectURL(videoBlob);
-            // console.log(videoObjectUrl); // You can use this URL to play the video
-
-        } catch (err) {
-            console.log(err);
-        }
-    };
+    // const fetchVideo = async () => {
+    //     try {
+    //         // Use the CORS proxy to fetch the video
+    //         const proxyUrl = 'http://localhost:8080/';
+    //         const videoUrl = post[0]?.file_url; // Get the video URL from the post
+    //         const res = await fetch(`${proxyUrl}${videoUrl}`, {
+    //             method: 'GET',
+    //             headers: {
+    //                 'Origin': window.location.origin, // Set the origin header
+    //                 'X-Requested-With': 'XMLHttpRequest' // This header is also required
+    //             }
+    //         });
+    //
+    //         if (!res.ok) {
+    //             throw new Error('Network response was not ok');
+    //         }
+    //
+    //
+    //         const videoBlob = await res.blob();
+    //         // console.log(res.url);
+    //         const videoObjectUrl = URL.createObjectURL(videoBlob);
+    //         // console.log(videoObjectUrl); // You can use this URL to play the video
+    //
+    //     } catch (err) {
+    //         console.log(err);
+    //     }
+    // };
 
 
     return (
@@ -227,7 +443,7 @@ function Page(props) {
                                     className={`max-h-[85vh] max-md:max-w-[50vh]`}
                                     width={post[0]?.preview_width * 6}
                                     height={post[0]?.preview_height * 6}
-                                    onClick={() => directToVideo(post[0]?.file_url)}
+                                    onClick={() => window.open(post[0]?.file_url, "_blank")}
                                 />
                             ) : (
                                 <Image
@@ -248,12 +464,16 @@ function Page(props) {
                     order-2 row-start-2 col-start-1 col-end-3
                     md:order-2 md:row-start-2 md:col-start-1 md:col-end-3
                      flex flex-row w-full justify-around items-center">
-                        <button onClick={() => handleChangePage('previous')} disabled={currentIndex <= 0}
-                                hidden={currentIndex === 0}>
+                        <button onClick={() => handleChangePage('previous')}
+                                disabled={hideButton.prev}
+                                hidden={hideButton.prev}
+                        >
                             Previous
                         </button>
-                        <button onClick={() => handleChangePage('next')} disabled={currentIndex >= arrayId.length - 1}
-                                hidden={currentIndex + 1 === arrayId.length}>
+                        <button onClick={() => handleChangePage('next')}
+                                disabled={hideButton.next}
+                                hidden={hideButton.next}
+                        >
                             Next
                         </button>
                     </div>
@@ -272,7 +492,7 @@ function Page(props) {
 
                             {relativePost?.post?.map((item, index) => (
                                 <div key={index}
-                                     className="max-h-[40vh]  md:w-[25vh] w-[13vh] hover:opacity-40 hover:cursor-pointer"
+                                     className="max-h-[40vh] overflow-hidden  md:w-[25vh] w-[13vh] hover:opacity-40 hover:cursor-pointer"
                                      onClick={() => handleChangePage(item.id)}>
                                     <Image
                                         src={`${item?.preview_url}`}

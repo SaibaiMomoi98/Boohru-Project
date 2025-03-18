@@ -1,7 +1,7 @@
 import { fetchTags } from "@/Helper/FetchTags";
 import {signToken} from "@/middleware/hash"; // Adjust the import path as necessary
 
-export const FetchPosts = async (s, pagination, prefStorage, pathname) => {
+export const FetchPosts = async (s, pagination, prefStorage, includeTags) => {
     let urlPost = '/post.json?includeOffset=true';
     const decodedSearch = decodeURIComponent(s);
     const search = decodedSearch.split(" ").map((item) => {
@@ -19,7 +19,7 @@ export const FetchPosts = async (s, pagination, prefStorage, pathname) => {
         // console.log(`${urlPost}&page=${pagination.currentPage}`)
         const response = await fetch(`${urlPost}&page=${pagination.currentPage}`);
         const data = await response.json();
-        if (pathname === "/post") {
+        if (includeTags) {
         const tags = await fetchTags(data, s, prefStorage);
         return { data, tags };
         } else{
