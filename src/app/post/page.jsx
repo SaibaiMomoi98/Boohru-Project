@@ -41,11 +41,40 @@ const Page = () => {
         setPrefStorageFunc();
     }, []);
 
+
+    function getSessionStorageSize() {
+        if (window !== undefined) {
+            const windowSession = window.sessionStorage
+            let total = 0;
+            for (let key in windowSession) {
+                if (sessionStorage.hasOwnProperty(key)) {
+                    total += sessionStorage[key].length * 2; // Each character is 2 bytes (UTF-16)
+                }
+            }
+            return total; // Size in bytes
+        }
+    }
+
+
     useEffect(() => {
+        const sizeInBytes = getSessionStorageSize();
+        const sizeInMB = sizeInBytes / (1024 * 1024); // Convert to MB
+        console.log(`sessionStorage size: ${sizeInMB.toFixed(2)} MB`);
+
         const cacheRaw = sessionStorage.getItem("c");
         const shouldFetch = prefStorage.limit !== undefined && prefStorage.rating !== undefined;
-
+        const cacheId = sessionStorage.getItem("ci");
         if (cacheRaw) {
+            if (cacheId) {
+                const dataCacheId = verifyToken(cacheId);
+                console.log(dataCacheId, " cache id");
+                if (Number(dataCacheId.currentPage) !== Number(p)) {
+                    const dataObjCacheId = {currentPage: Number(p), search: dataCacheId.search};
+                    console.log(dataObjCacheId, "cache obj");
+                    const stringObj = signToken(dataObjCacheId)
+                    sessionStorage.setItem("ci", stringObj)
+                }
+            }
             setLoading(true);
             const cache = verifyToken(cacheRaw);
 
@@ -57,17 +86,16 @@ const Page = () => {
 
                 const searchCache = Object.keys(cache[ratingKey]).find((key, index) => key === s);
                 const cachePageKeys = searchCacheData.cache.map((entry) => Object.keys(entry)[0]).find((key) => Number(key) === Number(p));
+
                 const currentPageCache = searchCacheData.cache.find((entry) => {
                     const pageKey = Object.keys(entry)[0];
                     return pageKey === p;
                 });
-            console.log(cachePageKeys,"cache data")
-            // console.log(Object.keys(currentPageCache)[0],"cache data")
+                // console.log(cachePageKeys, "cache data")
+                // console.log(Object.keys(currentPageCache)[0],"cache data")
                 // console.log(Object.keys(cache[ratingKey]).filter((el,index) => el !== "iat"))
                 // console.log(Object.keys(cache[ratingKey]).filter((el,index) => el !== "iat").length, "length inich")
-                if (Object.keys(cache[ratingKey]).filter((el,index) => el !== "iat").length >= 10) {
-                    cache[ratingKey] = {}
-                }
+
 
 
                 console.log(Number(cachePageKeys) !== Number(p) && shouldFetch || s !== searchKey && shouldFetch, "masuk fetch");
@@ -76,14 +104,14 @@ const Page = () => {
                     fetchPosts(); // Fetch new data if the page or search term has changed
                 } else {
                     if (currentPageCache) {
-                        const { data, tags } = Object.values(currentPageCache)[0]; // Extract data and tags
+                        const {data, tags} = Object.values(currentPageCache)[0]; // Extract data and tags
                         if (data.status || tags.status || tags.creator.length === 0 || tags.character.length === 0 || data.post.length === 0) {
                             sessionStorage.removeItem("c")
                         }
                         console.log("masuk cache");
                         setPosts(data);
                         setRelativeTags(tags);
-                        setPagination(prev => ({ ...prev, totalPages: searchCacheData.pages }));
+                        setPagination(prev => ({...prev, totalPages: searchCacheData.pages}));
                         dispatch(setCachePosts(data));
                     }
                     setLoading(false);
@@ -101,6 +129,7 @@ const Page = () => {
             setPagination(prev => ({...prev, currentPage: Number(p)}));
         }
     }, [searchParams]);
+
 
     const setPrefStorageFunc = () => {
         const pref = sessionStorage.getItem("pref");
@@ -140,7 +169,15 @@ const Page = () => {
                 cache[ratingKey] = {};
             }
 
-            // Initialize the search key under the rating key if it doesn't exist
+            const searchKeys = Object.keys(cache[ratingKey]);
+            if (searchKeys.length >= 5) {
+                const keysToRemove = searchKeys.slice(0, 2);
+                keysToRemove.forEach(key => {
+                    delete cache[ratingKey][key];
+                });
+                console.log("Removed the first 2 search keys because the limit of 5 was exceeded.");
+            }
+
             if (!cache[ratingKey][searchKey]) {
                 cache[ratingKey][searchKey] = {
                     pages,
@@ -151,20 +188,28 @@ const Page = () => {
                     ],
                 };
             } else {
-                // If the search term exists, check if the page already exists in the cache
+
+                if (cache[ratingKey][searchKey].cache.length >= 10) {
+                    cache[ratingKey][searchKey].cache.splice(0, 5);
+                    console.log("Cache array cleared because it exceeded the limit of 10 entries.");
+                }
+
                 const pageExists = cache[ratingKey][searchKey].cache.some((entry) => entry[pageKey]);
 
                 if (!pageExists) {
-                    // If the page doesn't exist, add it to the cache array
                     cache[ratingKey][searchKey].cache.push({
                         [pageKey]: { data, tags },
                     });
                 } else {
-                    // If the page exists, update its data
                     const pageIndex = cache[ratingKey][searchKey].cache.findIndex((entry) => entry[pageKey]);
                     cache[ratingKey][searchKey].cache[pageIndex][pageKey] = { data, tags };
                 }
             }
+
+            // Update the ci cache
+            const cachePostId = { currentPage: pagination.currentPage, search: prefStorage.search || s }
+            const tokenIdCache = signToken(cachePostId);
+            sessionStorage.setItem("ci", tokenIdCache);
 
             // Store the updated cache in sessionStorage
             const tokenCache = signToken(cache);
@@ -176,6 +221,7 @@ const Page = () => {
             setLoading(false);
         }
     };
+
 
     const goToPostDetails = (id) => {
         router.push(`/post/${id}${s ? "?s=" + encodeURIComponent(s) : ""}`);

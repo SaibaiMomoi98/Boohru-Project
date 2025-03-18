@@ -28,21 +28,21 @@ export default function RootLayout({
 }>) {
     return (
         <StoreProvider>
+        <ThemeProvider>
 
         <html lang="en">
         <body
             className={`${geistSans.variable} ${geistMono.variable} antialiased `}
         >
-        <ThemeProvider>
             <div  className="bg-peach-cream dark:bg-pink-800 h-auto w-full" >
 
                 <NavbarComponents/>
                 {children}
                 <footer>INI FOOTER</footer>
             </div>
-        </ThemeProvider>
         </body>
         </html>
+        </ThemeProvider>
         </StoreProvider>
     );
 }

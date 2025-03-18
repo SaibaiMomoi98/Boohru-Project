@@ -13,7 +13,7 @@ const p = searchParams.get("p");
         if (p){
             setActive(Number(p))
         }
-    }, [pages]);
+    }, [pages, p]);
 
     const changePagination = (page) => {
         setActive(page);

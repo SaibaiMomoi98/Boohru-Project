@@ -110,7 +110,7 @@ const dispatch = useDispatch();
         if (!s && pathname !== "/post") {
             const pref = sessionStorage.getItem("pref");
             if (pref) {
-                const decodedPrefz2 = verifyToken(pref);
+                const decodedPref = verifyToken(pref);
                 if (decodedPref?.search) {
                     // Remove the search property from prefStorage
                     const updatedPref = {...decodedPref};
@@ -125,8 +125,6 @@ const dispatch = useDispatch();
                 }
             }
         }
-
-        console.log(prefStorage, "pref dari search bar")
     }, [s, pathname]);
 
     useEffect(() => {
@@ -153,6 +151,7 @@ const dispatch = useDispatch();
 
     const handleOnChange = (e) => {
         const value = e.target.value;
+        console.log(value, "seacrh")
         const valueSplit = value.split(' ');
         setSearchTerm(valueSplit);
         setRefreshed(false);
