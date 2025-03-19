@@ -13,9 +13,10 @@ import SearchBar from "../../../components/SearchBar";
 import {FetchPosts} from "../../../Helper/FetchPost";
 import {isNumber} from "node:util";
 import {useDispatch, useSelector} from "react-redux";
-import {setCachePosts} from "../../../lib/cacheSlice/cacheSlice";
+import {setCachePost, setCachePosts} from "../../../lib/cacheSlice/cacheSlice";
 import {setPrefStorage} from "../../../lib/prefStorage/PrefStorage";
 import {encodeHtmlEntity} from "../../../Helper/encodeDecodeHtmlTags";
+
 
 function Page(props) {
     const dispatch = useDispatch();
@@ -39,7 +40,7 @@ function Page(props) {
         next: false,
         prev: false,
     });
-    const cachePost = useSelector((state) => state.cache.cachePosts);
+    const {cachePosts, cachePost} = useSelector((state) => state.cache);
     const searchParams = useSearchParams()
     const s = searchParams.get("s")
 
@@ -51,7 +52,6 @@ function Page(props) {
             setPost(post);
 
 
-            console.log(cachePost, "cache post");
 
             const tags = await fetchTags(post, "", "", params.id);
             // console.log(tags);
@@ -139,8 +139,8 @@ function Page(props) {
                     return none;
                 } else {
                     let previousPage = Number(cachePost.currentPage) - 1
-                    const {data} = await FetchPosts(
-                        cachePost.search || relativeTags?.creator[0]?.name || relativeTags?.character[0]?.name, {currentPage: previousPage}, prefStorage, false)
+                    const {data, tags} = await FetchPosts(
+                        cachePost.search || relativeTags?.creator[0]?.name || relativeTags?.character[0]?.name, {currentPage: previousPage}, prefStorage, true)
                     // console.log(data)
                     // dispatch(setCachePosts(data));
                     // const signToken()
@@ -148,9 +148,11 @@ function Page(props) {
                     const checkPage = isPageCached(previousPage);
                     if (!checkPage) {
                         currentCache.cache.push({
-                            [previousPage]: {data},
+                            [previousPage]: {data, tags},
                         })
-                        const stringNextCache = signToken(currentCache)
+
+                        console.log(cache, "cache data with previous page")
+                        const stringNextCache = signToken(cache)
                         sessionStorage.setItem("c", stringNextCache)
 
                     }
@@ -173,23 +175,27 @@ function Page(props) {
                     setHideButton((prev) => ({...prev, next: true}))
                     return none;
                 }
+                
                 let nextPage = Number(cachePost.currentPage) + 1;
-                const {data} = await FetchPosts(cachePost.search || relativeTags?.creator[0]?.name || relativeTags?.character[0]?.name, {currentPage: nextPage}, prefStorage, false);
+                const {data, tags} = await FetchPosts(cachePost.search || relativeTags?.creator[0]?.name || relativeTags?.character[0]?.name, {currentPage: nextPage}, prefStorage, true);
                 const checkCachePage = isPageCached(nextPage)
+
                 if (!checkCachePage) {
                     currentCache.cache.push({
-                        [nextPage]: {data},
+                        [nextPage]: {data, tags},
                     })
 
                     // console.log(currentCache, "cache updated")
-                    const stringNextCache = signToken(currentCache)
+                    const stringNextCache = signToken(cache)
                     sessionStorage.setItem("c", stringNextCache)
                 }
                 // console.log(checkCachePage, "check next page cached")
                 const nextId = data.post.map((el, i) => el.id)
+                if (nextId){
                 const nextFetchedId = nextId[0];
                 console.log(data, nextId, nextFetchedId, "masuk next page")
                 setNextId(nextFetchedId);
+                }
             }
         } catch (error) {
             console.log(error)
@@ -228,8 +234,10 @@ function Page(props) {
 
                 const currentPagePost = searchCacheData.cache.find((el) => Number(Object.keys(el)) === Number(cacheId.currentPage));
                 console.log(cacheId.currentPage, "current Page")
+                console.log(searchCacheData, "currentPage");
+                
                 console.log(searchCacheData.cache.find((el) => Number(Object.keys(el)) === Number(cacheId.currentPage)), "currentPagePost");
-
+                
                 if (currentPagePost) {
                     const {data} = currentPagePost[cacheId.currentPage];
                     const arrayId = data.post.map((el) => el.id);
@@ -241,13 +249,14 @@ function Page(props) {
                         console.log("masuk dulu")
                     }
                     console.log(currentIndexCache, "currentIndexCache");
-                    if (currentIndexCache !== -1) {
+                    // if (currentIndexCache !== -1) {
                         setArrayId(arrayId);
-                        setCurrentIndex(currentIndexCache); // Update currentIndex here
-                        dispatch(setCachePosts(cacheId));
+                        setCurrentIndex(currentIndexCache); 
+                        dispatch(setCachePost(cacheId))
+                        dispatch(setCachePosts(arrayId));
 
                         console.log("Post data loaded from cache");
-                    }
+                    // }
                 }
             }
         } else {
@@ -258,6 +267,8 @@ function Page(props) {
         }
 
     }, [params.id, prefStorage.rating]);
+
+
     useEffect(() => {
         const prefRaw = sessionStorage.getItem("pref");
         if (prefRaw) {
@@ -266,9 +277,9 @@ function Page(props) {
 
     }, [])
 
-    useEffect(() => {
-        console.log(loading, "loading")
-    }, [loading]);
+    console.log(cachePosts, "cache post");
+    console.log(cachePost, "cache post search");
+
 
 
     // useEffect(() => {
@@ -307,7 +318,7 @@ function Page(props) {
                     const cacheId = sessionStorage.getItem("ci");
                     const cacheIdObj = verifyToken(cacheId);
                     console.log(cacheIdObj, "cache id brr");
-                    const cache = {search: prefStorage.search, currentPage: Number(cachePost.currentPage) + 1};
+                    const cache = {search: cacheIdObj.search, currentPage: Number(cachePost.currentPage) + 1};
                     console.log(cache, "cache next");
                     const string = signToken(cache);
                     sessionStorage.setItem("ci", string);
@@ -324,8 +335,9 @@ function Page(props) {
                     const cacheId = sessionStorage.getItem("ci");
                     const cacheIdObj = verifyToken(cacheId);
                     console.log(cacheIdObj, "cache id brr");
+                    console.log(cachePost, "cache id post");
                     const cache = {
-                        search: prefStorage.search,
+                        search: cacheId.search,
                         currentPage: cacheIdObj.currentPage <= 1 ? 1 : Number(cachePost.currentPage) - 1
                     };
                     console.log(cache, "cache again");
@@ -405,22 +417,6 @@ function Page(props) {
                     order-3 row-start-4 col-start-1 col-end-3
                     ">
                         <div className="flex flex-row max-md:justify-center flex-wrap gap-2">
-                            <div className="flex flex-row flex-wrap gap-2 justify-center items-center">
-                                <div
-                                    className="bg-green-400 h-[4vh] flex flex-row items-center rounded-lg p-1 text-center text-[10px] text-green-900">Artist
-                                </div>
-                                <div
-                                    className="bg-cyan-400 h-[4vh] flex flex-row items-center rounded-lg p-1 text-center text-[10px] text-blue-900">Shows/Games
-                                </div>
-                                <div
-                                    className="bg-red-400 h-[4vh] flex flex-row items-center rounded-lg p-1 text-center text-[10px] text-red-900">Characters
-                                </div>
-                                <div
-                                    className="bg-pink-400 h-[4vh] flex flex-row items-center rounded-lg p-1 text-center text-[10px] text-pink-900">Genre
-                                    & Other
-                                </div>
-                            </div>
-                            <div className="h-[2px] bg-pink-400 w-full my-4"></div>
                             <RenderTags relativeTags={relativeTags}/>
                         </div>
                     </div>
@@ -432,7 +428,7 @@ function Page(props) {
                     md:ps-10
 
                      ">
-                        <div className={`w-full md:max-w-[80vh]  flex flex-row justify-center items-center`}>
+                        <div className={`w-full md:max-w-[80vh]  flex flex-row justify-center items-start`}>
 
                             {isVideo ? (
                                 <Image
@@ -440,7 +436,7 @@ function Page(props) {
                                     alt={post[0]?.file_url}
                                     priority={true}
                                     layout="responsive"
-                                    className={`max-h-[85vh] max-md:max-w-[50vh]`}
+                                    className={`max-h-[100%] max-md:max-w-[90%]`}
                                     width={post[0]?.preview_width * 6}
                                     height={post[0]?.preview_height * 6}
                                     onClick={() => window.open(post[0]?.file_url, "_blank")}
@@ -453,7 +449,7 @@ function Page(props) {
                                     layout="responsive"
                                     width={post[0]?.sample_width * 2}
                                     height={post[0]?.sample_height * 2}
-                                    className={`max-h-[100vh] max-w-[60vh]`}
+                                    className={`max-h-[100%] max-w-[80%]`}
                                 />
                             )}
                         </div>
@@ -479,9 +475,9 @@ function Page(props) {
                     </div>
 
                     {/*relative post*/}
-                    <div className=' w-[50vh] h-[30vh]
+                    <div className=' h-[30vh]
                         md:order-3 md:row-start-4 md:row-end-5 md:col-start-1 md:col-end-3
-                        h-auto w-full
+                        h-auto max-w-full
                         row-start-5 col-start-1 col-end-3 order-4
                         '>
                         <h1>Related To {relativeTags?.creator[0]?.name || relativeTags?.character[0]?.name}</h1>

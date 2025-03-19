@@ -2,6 +2,7 @@ import { createSlice } from "@reduxjs/toolkit";
 
 const initialState = {
     cachePosts: {},
+    cachePost: {},
     cacheTags : {},
 };
 
@@ -15,11 +16,14 @@ const cacheSlice = createSlice({
         setCacheTags: (state, action) => {
             state.cacheTags = action.payload;
         },
+        setCachePost: (state, action) => {
+            state.cachePost = action.payload;
+        },
         clearCache: (state) => {
             state.cachePosts = {};
         },
     },
 });
 
-export const { setCachePosts, setCacheTags ,clearCache } = cacheSlice.actions;
+export const { setCachePost ,setCachePosts, setCacheTags ,clearCache } = cacheSlice.actions;
 export default cacheSlice.reducer;
