@@ -31,5 +31,24 @@ export default function RenderTags({ relativeTags }) {
         return tagComponents;
     };
 
-    return <div className="flex flex-wrap gap-2">{renderRelativeTags()}</div>;
+    return (
+        <div className="flex flex-row max-md:justify-center flex-wrap gap-2">
+            <div className="flex flex-row flex-wrap gap-2 justify-center items-center">
+                <div
+                    className="bg-green-400 h-[4vh] flex flex-row items-center rounded-lg p-1 text-center text-[10px] text-green-900">Artist
+                </div>
+                <div
+                    className="bg-cyan-400 h-[4vh] flex flex-row items-center rounded-lg p-1 text-center text-[10px] text-blue-900">Shows/Games
+                </div>
+                <div
+                    className="bg-red-400 h-[4vh] flex flex-row items-center rounded-lg p-1 text-center text-[10px] text-red-900">Characters
+                </div>
+                <div
+                    className="bg-pink-400 h-[4vh] flex flex-row items-center rounded-lg p-1 text-center text-[10px] text-pink-900">Genre
+                    & Other
+                </div>
+            </div>
+            <div className="h-[2px] bg-pink-400 w-full my-4"></div>
+            {renderRelativeTags()}
+        </div>)
 }

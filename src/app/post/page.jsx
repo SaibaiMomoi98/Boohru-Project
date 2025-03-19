@@ -68,9 +68,10 @@ const Page = () => {
             if (cacheId) {
                 const dataCacheId = verifyToken(cacheId);
                 console.log(dataCacheId, " cache id");
-                if (Number(dataCacheId.currentPage) !== Number(p)) {
-                    const dataObjCacheId = {currentPage: Number(p), search: dataCacheId.search};
-                    console.log(dataObjCacheId, "cache obj");
+                console.log(Number(dataCacheId.currentPage) !== Number(p) || dataCacheId.search !== s, " cache id");
+                if (Number(dataCacheId.currentPage) !== Number(p) || dataCacheId.search !== s) {
+                    const dataObjCacheId = {currentPage: Number(p), search: s || dataCacheId.search};
+                    console.log(dataObjCacheId, "cache id masuk fetch");
                     const stringObj = signToken(dataObjCacheId)
                     sessionStorage.setItem("ci", stringObj)
                 }
@@ -78,7 +79,7 @@ const Page = () => {
             setLoading(true);
             const cache = verifyToken(cacheRaw);
 
-            console.log(cache)
+            console.log(cache, "cache")
             const ratingKey = prefStorage.rating; // e.g., "safe" or "nsfw"
             const searchKey = encodeHtmlEntity(s); // Encode the search term
             const searchCacheData = cache[ratingKey]?.[searchKey]; // Get cache for the current rating and search term
@@ -258,25 +259,8 @@ const Page = () => {
                                 <SearchBar/>
                             </div>
                             <div className="order-4 md:order-1 md:row-start-2 md:row-end-4 md:col-start-1">
-                                <div className="flex flex-row max-md:justify-center flex-wrap gap-2">
-                                    <div className="flex flex-row flex-wrap gap-2 justify-center items-center">
-                                        <div
-                                            className="bg-green-400 h-[4vh] flex flex-row items-center rounded-lg p-1 text-center text-[10px] text-green-900">Artist
-                                        </div>
-                                        <div
-                                            className="bg-cyan-400 h-[4vh] flex flex-row items-center rounded-lg p-1 text-center text-[10px] text-blue-900">Shows/Games
-                                        </div>
-                                        <div
-                                            className="bg-red-400 h-[4vh] flex flex-row items-center rounded-lg p-1 text-center text-[10px] text-red-900">Characters
-                                        </div>
-                                        <div
-                                            className="bg-pink-400 h-[4vh] flex flex-row items-center rounded-lg p-1 text-center text-[10px] text-pink-900">Genre
-                                            & Other
-                                        </div>
-                                    </div>
-                                    <div className="h-[2px] bg-pink-400 w-full my-4"></div>
+                                
                                     <RenderTags relativeTags={relativeTags}/>
-                                </div>
                             </div>
                             <div
                                 className="order-3 md:ps-[2vh] md:row-start-2 md:row-end-4 md:col-start-2 md:col-end-5 flex flex-wrap items-center justify-center md:justify-start gap-[10px] max-sm:mt-[4vh]">

@@ -107,24 +107,24 @@ const dispatch = useDispatch();
             const array = decodedSearch.split(" ");
             setArrValue(array);
         }
-        if (!s && pathname !== "/post") {
-            const pref = sessionStorage.getItem("pref");
-            if (pref) {
-                const decodedPref = verifyToken(pref);
-                if (decodedPref?.search) {
-                    // Remove the search property from prefStorage
-                    const updatedPref = {...decodedPref};
-                    delete updatedPref.search;
-
-                    // Update sessionStorage with the modified prefStorage
-                    const updatedPrefString = signToken(updatedPref);
-                    sessionStorage.setItem("pref", updatedPrefString);
-
-                    // Update Redux state
-                    dispatch(setPrefStorage(updatedPrefString));
-                }
-            }
-        }
+        // if (!s && pathname !== "/post") {
+        //     const pref = sessionStorage.getItem("pref");
+        //     if (pref) {
+        //         const decodedPref = verifyToken(pref);
+        //         if (decodedPref?.search) {
+        //             // Remove the search property from prefStorage
+        //             const updatedPref = {...decodedPref};
+        //             delete updatedPref.search;
+        //
+        //             // Update sessionStorage with the modified prefStorage
+        //             const updatedPrefString = signToken(updatedPref);
+        //             sessionStorage.setItem("pref", updatedPrefString);
+        //
+        //             // Update Redux state
+        //             dispatch(setPrefStorage(updatedPrefString));
+        //         }
+        //     }
+        // }
     }, [s, pathname]);
 
     useEffect(() => {
@@ -203,7 +203,7 @@ const dispatch = useDispatch();
 
     return (
         <div className="relative">
-            <form className="max-w-md mx-auto" onSubmit={handleOnSubmit} autoComplete="off">
+            <form className={`${pathname === "/" ? "max-w-md" : "ps-5 pe-5"} mx-auto`} onSubmit={handleOnSubmit} autoComplete="off">
                 <label htmlFor="default-search"
                        className="mb-2 text-sm font-medium text-gray-900 sr-only dark:text-white">Search</label>
                 <div className="relative">
