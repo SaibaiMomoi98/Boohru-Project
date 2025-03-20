@@ -260,7 +260,7 @@ function Page(props) {
                 }
             }
         } else {
-            router.push("/")
+            setHideButton((prev) => ({...prev , next: true, prev: true}));
         }
         if (prefStorage.rating) {
             fetchPostWithId(params.id);
