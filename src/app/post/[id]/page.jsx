@@ -103,7 +103,7 @@ function Page(props) {
             console.log(cachePost.search || relativeTags?.creator[0]?.name || relativeTags?.character[0]?.name, Number(cachePost.currentPage) - 1, prefStorage, "")
             console.log(cachePost)
 
-            const searchKey = cachePost.search;
+            const searchKey = cachePost.search || relativeTags?.creator[0]?.name || relativeTags?.character[0]?.name;
             const currentPage = cachePost.currentPage;
             const ratingKey = prefStorage.rating;
 
@@ -121,6 +121,7 @@ function Page(props) {
                     cache: [],
                 };
             }
+            console.log(cache, "dari fetchIndex")
 
             const currentCache = cache[ratingKey][searchKey];
             const cachePageKeys = currentCache.cache.map((entry) => Object.keys(entry)[0]);
@@ -128,17 +129,19 @@ function Page(props) {
 
             // dispatch(setCachePosts({}));
 
+            const currentPageToFetch = currentCache.currentPage || relativeData.currentPage;
+
             const isPageCached = (pageToCheck) => {
                 return cachePageKeys.includes(pageToCheck.toString())
             }
 
             if (currentIndex === 0) { //prevPost
                 // s, pagination, prefStorage, pathname
-                if (cachePost.currentPage === 0) {
+                if (currentPageToFetch === 0) {
                     setHideButton((prev) => ({...prev, prev: true}))
                     return none;
                 } else {
-                    let previousPage = Number(cachePost.currentPage) - 1
+                    let previousPage = Number(currentPageToFetch) - 1
                     const {data, tags} = await FetchPosts(
                         cachePost.search || relativeTags?.creator[0]?.name || relativeTags?.character[0]?.name, {currentPage: previousPage}, prefStorage, true)
                     // console.log(data)
@@ -176,7 +179,7 @@ function Page(props) {
                     return none;
                 }
                 
-                let nextPage = Number(cachePost.currentPage) + 1;
+                let nextPage = Number(currentPageToFetch) + 1;
                 const {data, tags} = await FetchPosts(cachePost.search || relativeTags?.creator[0]?.name || relativeTags?.character[0]?.name, {currentPage: nextPage}, prefStorage, true);
                 const checkCachePage = isPageCached(nextPage)
 
@@ -297,12 +300,12 @@ function Page(props) {
 
     const handleChangePage = (action) => {
         if (isNumber(action)) {
-            router.push(`/post/${action}`);
             if (relativeData){
                 console.log(relativeData, "relativeData");
                 const signTokenCi = signToken(relativeData);
                 sessionStorage.setItem("ci", signTokenCi);
             }
+            router.push(`/post/${action}`);
             return;
         }
 

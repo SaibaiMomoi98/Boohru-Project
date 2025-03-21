@@ -55,74 +55,108 @@ const Page = () => {
         }
     }
 
+    const fetchCurrentPost = async () => {
+        try {
+            const sizeInBytes = getSessionStorageSize();
+            const sizeInMB = sizeInBytes / (1024 * 1024); // Convert to MB
+            console.log(`sessionStorage size: ${sizeInMB.toFixed(2)} MB`);
+            const cacheRaw = sessionStorage.getItem("c");
 
-    useEffect(() => {
-        const sizeInBytes = getSessionStorageSize();
-        const sizeInMB = sizeInBytes / (1024 * 1024); // Convert to MB
-        console.log(`sessionStorage size: ${sizeInMB.toFixed(2)} MB`);
-
-        const cacheRaw = sessionStorage.getItem("c");
-        const shouldFetch = prefStorage.limit !== undefined && prefStorage.rating !== undefined;
-        const cacheId = sessionStorage.getItem("ci");
-        if (cacheRaw) {
-            if (cacheId) {
-                const dataCacheId = verifyToken(cacheId);
-                console.log(dataCacheId, " cache id");
-                console.log(Number(dataCacheId.currentPage) !== Number(p) || dataCacheId.search !== s, " cache id");
-                if (Number(dataCacheId.currentPage) !== Number(p) || dataCacheId.search !== s) {
-                    const dataObjCacheId = {currentPage: Number(p), search: s || dataCacheId.search};
-                    console.log(dataObjCacheId, "cache id masuk fetch");
-                    const stringObj = signToken(dataObjCacheId)
-                    sessionStorage.setItem("ci", stringObj)
-                }
-            }
-            setLoading(true);
-            const cache = verifyToken(cacheRaw);
-
-            console.log(cache, "cache")
-            const ratingKey = prefStorage.rating; // e.g., "safe" or "nsfw"
-            const searchKey = encodeHtmlEntity(s); // Encode the search term
-            const searchCacheData = cache[ratingKey]?.[searchKey]; // Get cache for the current rating and search term
-            if (searchCacheData) {
-
-                const searchCache = Object.keys(cache[ratingKey]).find((key, index) => key === s);
-                const cachePageKeys = searchCacheData.cache.map((entry) => Object.keys(entry)[0]).find((key) => Number(key) === Number(p));
-
-                const currentPageCache = searchCacheData.cache.find((entry) => {
-                    const pageKey = Object.keys(entry)[0];
-                    return pageKey === p;
-                });
-                // console.log(cachePageKeys, "cache data")
-                // console.log(Object.keys(currentPageCache)[0],"cache data")
-                // console.log(Object.keys(cache[ratingKey]).filter((el,index) => el !== "iat"))
-                // console.log(Object.keys(cache[ratingKey]).filter((el,index) => el !== "iat").length, "length inich")
-
-
-
-                console.log(Number(cachePageKeys) !== Number(p) && shouldFetch || s !== searchKey && shouldFetch, "masuk fetch");
-
-                if (Number(cachePageKeys) !== Number(p) && shouldFetch || s !== searchKey && shouldFetch) {
-                    fetchPosts(); // Fetch new data if the page or search term has changed
-                } else {
-                    if (currentPageCache) {
-                        const {data, tags} = Object.values(currentPageCache)[0]; // Extract data and tags
-                        if (data.status || tags.status || tags.creator.length === 0 || tags.character.length === 0 || data.post.length === 0) {
-                            sessionStorage.removeItem("c")
-                        }
-                        console.log("masuk cache");
-                        setPosts(data);
-                        setRelativeTags(tags);
-                        setPagination(prev => ({...prev, totalPages: searchCacheData.pages}));
-                        dispatch(setCachePosts(data));
+            const shouldFetch = prefStorage.limit !== undefined && prefStorage.rating !== undefined;
+            const cacheId = sessionStorage.getItem("ci");
+            if (cacheRaw) {
+                if (cacheId) {
+                    const dataCacheId = verifyToken(cacheId);
+                    console.log(dataCacheId, " cache id");
+                    console.log(Number(dataCacheId.currentPage) !== Number(p) || dataCacheId.search !== s, " cache id");
+                    if (Number(dataCacheId.currentPage) !== Number(p) || dataCacheId.search !== s) {
+                        const dataObjCacheId = {currentPage: Number(p), search: s || dataCacheId.search};
+                        console.log(dataObjCacheId, "cache id masuk fetch");
+                        const stringObj = signToken(dataObjCacheId)
+                        sessionStorage.setItem("ci", stringObj)
                     }
-                    setLoading(false);
+                }
+                setLoading(true);
+                const cache = verifyToken(cacheRaw);
+                console.log(cache, "cache")
+
+                const ratingKey = prefStorage.rating; // e.g., "safe" or "nsfw"
+                const searchKey = encodeHtmlEntity(s); // Encode the search term
+                const searchCacheData = cache[ratingKey]?.[searchKey]; // Get cache for the current rating and search term
+                if (searchCacheData) {
+                    const searchCache = Object.keys(cache[ratingKey]).find((key, index) => key === s);
+
+                    const cachePageKeys = searchCacheData.cache.map((entry) => Object.keys(entry)[0]).find((key) => Number(key) === Number(p));
+                    const currentPageCache = searchCacheData.cache.find((entry) => {
+                        const pageKey = Object.keys(entry)[0];
+                        return pageKey === p;
+                    });
+
+                    // console.log(cachePageKeys, "cache data")
+                    // console.log(Object.keys(currentPageCache)[0],"cache data")
+                    // console.log(Object.keys(cache[ratingKey]).filter((el,index) => el !== "iat"))
+                    // console.log(Object.keys(cache[ratingKey]).filter((el,index) => el !== "iat").length, "length inich")
+                    console.log(Number(cachePageKeys) !== Number(p) && shouldFetch || s !== searchKey && shouldFetch, "masuk fetch");
+
+
+                    if (Number(cachePageKeys) !== Number(p) && shouldFetch || s !== searchKey && shouldFetch) {
+
+
+                        // await fetchPosts(); // Fetch new data if the page or search term has changed
+                    } else {
+                        const {data: dataFetchCheck} = await FetchPosts(s, pagination, {
+                            limit: 1,
+                            rating: prefStorage.rating
+                        }, false);
+                        if (currentPageCache) {
+                            const {data, tags} = Object.values(currentPageCache)[0]; // Extract data and tags
+                            if (data.status || tags.status || tags.creator.length === 0 || tags.character.length === 0 || data.post.length === 0) {
+                                sessionStorage.removeItem("c")
+                            }
+                            console.log("masuk cache");
+                            console.log(dataFetchCheck, data.post[0], "check data")
+
+                            if (dataFetchCheck && !dataFetchCheck.status) {
+                                // console.log(dataFetchCheck?.post[0], data.post[0], "check data")
+                                // console.log(dataFetchCheck.post[0]?.id === data.post[0]?.id, "check data")
+                                if (dataFetchCheck.post[0]?.id !== data.post[0]?.id){
+                                    cache[ratingKey][searchKey].cache.push({
+                                        [cachePageKeys]: {}
+                                    })
+                                    const newCacheToken = signToken(cache);
+                                    sessionStorage.setItem("c", newCacheToken);
+                                    await fetchPosts()
+
+                                }else{
+                                    setPosts(data);
+                                    setRelativeTags(tags);
+                                    setPagination(prev => ({...prev, totalPages: searchCacheData.pages}));
+                                    dispatch(setCachePosts(data));
+                                }
+                            }
+                            setPosts(data);
+                            setRelativeTags(tags);
+                            setPagination(prev => ({...prev, totalPages: searchCacheData.pages}));
+                            dispatch(setCachePosts(data));
+                        }
+                        setLoading(false);
+                    }
+                } else if (shouldFetch) {
+                    await fetchPosts();
                 }
             } else if (shouldFetch) {
-                fetchPosts();
+                await fetchPosts();
             }
-        } else if (shouldFetch) {
-            fetchPosts();
+
+
+        } catch (err) {
+            console.log(err)
         }
+    }
+
+
+    useEffect(() => {
+        fetchCurrentPost()
     }, [s, pagination.currentPage, prefStorage.limit, prefStorage.rating]);
 
     useEffect(() => {
@@ -145,7 +179,7 @@ const Page = () => {
     const fetchPosts = async () => {
         setLoading(true);
         try {
-            const { data, tags } = await FetchPosts(s, pagination, prefStorage, true);
+            const {data, tags} = await FetchPosts(s, pagination, prefStorage, true);
             setPosts(data);
             setRelativeTags(tags);
 
@@ -155,7 +189,7 @@ const Page = () => {
             let pages;
             if (attributes) {
                 pages = Math.ceil(Number(attributes.count) / Number(attributes.limit));
-                setPagination(prev => ({ ...prev, totalPages: pages }));
+                setPagination(prev => ({...prev, totalPages: pages}));
             }
 
             const existingCache = sessionStorage.getItem("c");
@@ -184,7 +218,7 @@ const Page = () => {
                     pages,
                     cache: [
                         {
-                            [pageKey]: { data, tags },
+                            [pageKey]: {data, tags},
                         },
                     ],
                 };
@@ -199,16 +233,16 @@ const Page = () => {
 
                 if (!pageExists) {
                     cache[ratingKey][searchKey].cache.push({
-                        [pageKey]: { data, tags },
+                        [pageKey]: {data, tags},
                     });
                 } else {
                     const pageIndex = cache[ratingKey][searchKey].cache.findIndex((entry) => entry[pageKey]);
-                    cache[ratingKey][searchKey].cache[pageIndex][pageKey] = { data, tags };
+                    cache[ratingKey][searchKey].cache[pageIndex][pageKey] = {data, tags};
                 }
             }
 
             // Update the ci cache
-            const cachePostId = { currentPage: pagination.currentPage, search: prefStorage.search || s }
+            const cachePostId = {currentPage: pagination.currentPage, search: prefStorage.search || s}
             const tokenIdCache = signToken(cachePostId);
             sessionStorage.setItem("ci", tokenIdCache);
 
@@ -259,8 +293,8 @@ const Page = () => {
                                 <SearchBar/>
                             </div>
                             <div className="order-4 md:order-1 md:row-start-2 md:row-end-4 md:col-start-1">
-                                
-                                    <RenderTags relativeTags={relativeTags}/>
+
+                                <RenderTags relativeTags={relativeTags}/>
                             </div>
                             <div
                                 className="order-3 md:ps-[2vh] md:row-start-2 md:row-end-4 md:col-start-2 md:col-end-5 flex flex-wrap items-center justify-center md:justify-start gap-[10px] max-sm:mt-[4vh]">
