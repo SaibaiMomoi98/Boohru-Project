@@ -13,6 +13,7 @@ import {useDispatch, useSelector} from "react-redux";
 import {setCachePosts, setCacheTags} from "@/lib/cacheSlice/cacheSlice";
 import {encodeHtmlEntity} from "@/Helper/encodeDecodeHtmlTags";
 import {setPrefStorage, setPrefStorageRaw} from "@/lib/prefStorage/PrefStorage";
+import {warn} from "next/dist/build/output/log";
 
 const Page = () => {
     const dispatch = useDispatch();
@@ -102,7 +103,7 @@ const Page = () => {
                     if (Number(cachePageKeys) !== Number(p) && shouldFetch || s !== searchKey && shouldFetch) {
 
 
-                        // await fetchPosts(); // Fetch new data if the page or search term has changed
+                        await fetchPosts(); // Fetch new data if the page or search term has changed
                     } else {
                         const {data: dataFetchCheck} = await FetchPosts(s, pagination, {
                             limit: 1,
@@ -115,6 +116,7 @@ const Page = () => {
                             }
                             console.log("masuk cache");
                             console.log(dataFetchCheck, data.post[0], "check data")
+                            console.log(dataFetchCheck && !dataFetchCheck.status, "check data")
 
                             if (dataFetchCheck && !dataFetchCheck.status) {
                                 // console.log(dataFetchCheck?.post[0], data.post[0], "check data")
@@ -130,9 +132,11 @@ const Page = () => {
                                 }else{
                                     setPosts(data);
                                     setRelativeTags(tags);
-                                    setPagination(prev => ({...prev, totalPages: searchCacheData.pages}));
+                                    setPagination(prev => ({...prev, totalPages: p || searchCacheData.pages}));
                                     dispatch(setCachePosts(data));
                                 }
+                            } else if (dataFetchCheck.status === 500) {
+                                warn("somthing went wrong");
                             }
                             setPosts(data);
                             setRelativeTags(tags);
