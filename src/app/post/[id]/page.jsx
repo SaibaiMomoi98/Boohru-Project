@@ -79,7 +79,7 @@ function Page(props) {
                         const {data} = await FetchPosts(tagToUse, {currentPage: randomPages}, {
                             limit: 5,
                             rating: prefStorage.rating
-                        }, "");
+                        }, false);
                         setRelativePost(data);
                         setRelativeData((prev) => ({...prev, search: tagToUse, currentPage: randomPages}));
                     }
@@ -129,7 +129,12 @@ function Page(props) {
 
             // dispatch(setCachePosts({}));
 
-            const currentPageToFetch = currentCache.currentPage || relativeData.currentPage;
+            let currentPageToFetch;
+            if (cachePost && cachePageKeys.length > 0 || cachePost.currentPage) {
+                currentPageToFetch = cachePageKeys.find((el) => Number(el) === cachePost.currentPage) || cachePost.currentPage;
+            } else {
+                currentPageToFetch = cachePost.currentPage || 1; // Default to page 1 if no cache exists
+            }
 
             const isPageCached = (pageToCheck) => {
                 return cachePageKeys.includes(pageToCheck.toString())
@@ -137,6 +142,10 @@ function Page(props) {
 
             if (currentIndex === 0) { //prevPost
                 // s, pagination, prefStorage, pathname
+                console.log(cachePost.currentPage, "check cachePost page")
+                console.log(cache, "check cachePost page")
+                console.log(cachePageKeys.find((el) => Number(el) === cachePost.currentPage), "check page")
+                console.log(currentPageToFetch, "check page")
                 if (currentPageToFetch === 0) {
                     setHideButton((prev) => ({...prev, prev: true}))
                     return none;
@@ -147,6 +156,7 @@ function Page(props) {
                     // console.log(data)
                     // dispatch(setCachePosts(data));
                     // const signToken()
+                    const idsToPrev = data.post.map((el) => el.id)
 
                     const checkPage = isPageCached(previousPage);
                     if (!checkPage) {
@@ -157,6 +167,10 @@ function Page(props) {
                         console.log(cache, "cache data with previous page")
                         const stringNextCache = signToken(cache)
                         sessionStorage.setItem("c", stringNextCache)
+                        console.log(data.post.post.map((el) => el.id), "prev id")
+                        const dataPrevToCache = {prevIds: arrayId , currentIds: idsToPrev}
+                        console.log()
+
 
                     }
 
@@ -205,6 +219,10 @@ function Page(props) {
         }
     }
 
+    useEffect(() => {
+        console.log(relativeData, "relativeData")
+    }, [relativeData]);
+
 
     const isVideo = post && post[0]?.file_url?.endsWith('.mp4');
 
@@ -213,16 +231,23 @@ function Page(props) {
     //
     // }, [cachePost]);
 
-
-    useEffect(() => {
-
+    const handleStorageCache = () => {
         const cacheRaw = sessionStorage.getItem("c");
         const cacheIdRaw = sessionStorage.getItem("ci");
-
-
         if (cacheRaw && cacheIdRaw) {
-            const cache = verifyToken(cacheRaw);
-            const cacheId = verifyToken(cacheIdRaw);
+        const cache = verifyToken(cacheRaw);
+        const cacheId = verifyToken(cacheIdRaw);
+
+        return {cache, cacheId}
+        }
+    }
+
+
+    useEffect(() => {
+        const {cache, cacheId} = handleStorageCache()
+
+
+        if (cache && cacheId) {
 
             console.log(cache, "cache");
             console.log(cacheId, "cacheId");
@@ -262,6 +287,9 @@ function Page(props) {
                     // }
                 }
             }
+            // else if(cache[ratingKey] && !cache[ratingKey][searchKey]){
+            //
+            // }
         } else {
             setHideButton((prev) => ({...prev , next: true, prev: true}));
         }
@@ -304,9 +332,9 @@ function Page(props) {
                 console.log(relativeData, "relativeData");
                 const signTokenCi = signToken(relativeData);
                 sessionStorage.setItem("ci", signTokenCi);
+                router.push(`/post/${action}`);
+                return;
             }
-            router.push(`/post/${action}`);
-            return;
         }
 
         if (currentIndex === -1) return;
