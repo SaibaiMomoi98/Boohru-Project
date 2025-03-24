@@ -273,8 +273,10 @@ function Page(props) {
                     // Find the index of the current post in the arrayId
                     console.log(arrayId, "arrayId");
                     const currentIndexCache = arrayId.indexOf(Number(params.id));
-                    if (currentIndexCache === -1) {
+                    if (currentIndexCache === -1) {// cari dulu dari cache baru dimatiin tombol next/prev
                         console.log("masuk dulu")
+                        console.log(searchCacheData.cache.map((entry) => Object.keys(entry)), "pageKeys")
+
                     }
                     console.log(currentIndexCache, "currentIndexCache");
                     // if (currentIndexCache !== -1) {
@@ -290,6 +292,7 @@ function Page(props) {
             // else if(cache[ratingKey] && !cache[ratingKey][searchKey]){
             //
             // }
+
         } else {
             setHideButton((prev) => ({...prev , next: true, prev: true}));
         }
@@ -329,9 +332,10 @@ function Page(props) {
     const handleChangePage = (action) => {
         if (isNumber(action)) {
             if (relativeData){
-                console.log(relativeData, "relativeData");
-                const signTokenCi = signToken(relativeData);
-                sessionStorage.setItem("ci", signTokenCi);
+                // console.log(relativeData, "relativeData");
+                // const signTokenCi = signToken(relativeData);
+                // sessionStorage.setItem("ci", signTokenCi);
+                setHideButton((prev) => ({...prev , next: true, prev: true}));
                 router.push(`/post/${action}`);
                 return;
             }
