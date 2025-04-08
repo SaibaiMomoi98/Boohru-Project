@@ -288,10 +288,40 @@ function Page(props) {
                     const currentIndexCache = arrayId.indexOf(Number(params.id));
                     if (currentIndexCache === -1) {// cari dulu dari cache baru dimatiin tombol next/prev
                         console.log("masuk dulu")
-                        const pageKeysFound = searchCacheData.cache.map((entry) => Object.keys(entry))
-                        // console.log(searchCacheData.cache.map((entry) => Object.keys(entry)).toString(), "pageKeys")
-                        console.log(pageKeysFound, "pageKeysFound");
+                        let found = false;
+                        for (const entry of searchCacheData.cache) {
+                            const pageKeys = Object.keys(entry)[0]
+                            // console.log(pageKeys, "pageKeys")
+                            const {data: pageData} = entry[pageKeys];
+                            const pageArrayId = pageData.post.map(post => post.id);
+                            const foundIndex = pageArrayId.indexOf(Number(params.id));
+                            // console.log(foundIndex, "found index");
+                            if (foundIndex !== -1) {
+                                found = true;
+                                setArrayId(pageArrayId);
+                                setCurrentIndex(foundIndex);
+                                dispatch(setCachePost({
+                                    ...cacheId,
+                                    currentPage: Number(pageKeys)
+                                }));
+                                dispatch(setCachePosts(pageArrayId));
 
+                                // Update cacheId in sessionStorage
+                                const updatedCacheId = {
+                                    ...cacheId,
+                                    currentPage: Number(pageKeys)
+                                };
+                                sessionStorage.setItem("ci", signToken(updatedCacheId));
+
+                                console.log(`Found post in cached page ${pageKeys}`);
+                                break;
+                            }
+
+                            if (!found){
+                                console.log("Post not found in any cached pages - disabling navigation");
+                                setHideButton({next: true, prev: true});
+                            }
+                        }
                     }
                     console.log(currentIndexCache, "currentIndexCache");
                     // if (currentIndexCache !== -1) {
