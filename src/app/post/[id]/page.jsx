@@ -66,7 +66,7 @@ function Page(props) {
 
 
                 const tagToUse = creatorTag || characterTag;
-                console.log(prefStorage, 'prefstorage di fetchpostid')
+                // console.log(prefStorage, 'prefstorage di fetchpostid')
                 if (tagToUse) {
                     const {data} = await FetchPosts(tagToUse, {currentPage: 0}, {
                         limit: 5,
@@ -98,10 +98,10 @@ function Page(props) {
 
     const FetchFromIndex = async () => {
         try {
-            console.log(currentIndex, "index sekarang");
-            console.log(currentIndex === 0, "mau ngefetch sebelum");
-            console.log(cachePost.search || relativeTags?.creator[0]?.name || relativeTags?.character[0]?.name, Number(cachePost.currentPage) - 1, prefStorage, "")
-            console.log(cachePost)
+            // console.log(currentIndex, "index sekarang");
+            // console.log(currentIndex === 0, "mau ngefetch sebelum");
+            // console.log(cachePost.search || relativeTags?.creator[0]?.name || relativeTags?.character[0]?.name, Number(cachePost.currentPage) - 1, prefStorage, "")
+            // console.log(cachePost)
 
             const searchKey = cachePost.search || relativeTags?.creator[0]?.name || relativeTags?.character[0]?.name;
             const currentPage = cachePost.currentPage;
@@ -121,7 +121,7 @@ function Page(props) {
                     cache: [],
                 };
             }
-            console.log(cache, "dari fetchIndex")
+            // console.log(cache, "dari fetchIndex")
 
             const currentCache = cache[ratingKey][searchKey];
             const cachePageKeys = currentCache.cache.map((entry) => Object.keys(entry)[0]);
@@ -136,23 +136,35 @@ function Page(props) {
                 currentPageToFetch = cachePost.currentPage || 1; // Default to page 1 if no cache exists
             }
 
+            let currentSearchToFetch;
+            if (cachePost.search){
+                currentSearchToFetch = cachePost.search;
+            } else if (!cachePost.search && relativeTags.creator[0].name) {
+                currentSearchToFetch = relativeTags.creator[0].name;
+            } else if (!cachePost.search && !relativeTags.creator[0].name && relativeTags.character[0].name) {
+                currentSearchToFetch = relativeTags.character[0].name;
+            }
+
             const isPageCached = (pageToCheck) => {
                 return cachePageKeys.includes(pageToCheck.toString())
             }
 
+            console.log(currentSearchToFetch, "search cache")
+
             if (currentIndex === 0) { //prevPost
                 // s, pagination, prefStorage, pathname
-                console.log(cachePost.currentPage, "check cachePost page")
-                console.log(cache, "check cachePost page")
-                console.log(cachePageKeys.find((el) => Number(el) === cachePost.currentPage), "check page")
-                console.log(currentPageToFetch, "check page")
+                // console.log(cachePost.currentPage, "check cachePost page")
+                // console.log(cache, "check cachePost page")
+                // console.log(cachePageKeys.find((el) => Number(el) === cachePost.currentPage), "check page")
+                // console.log(currentPageToFetch, "check page")
                 if (currentPageToFetch === 0) {
                     setHideButton((prev) => ({...prev, prev: true}))
                     return none;
                 } else {
                     let previousPage = Number(currentPageToFetch) - 1
                     const {data, tags} = await FetchPosts(
-                        cachePost.search || relativeTags?.creator[0]?.name || relativeTags?.character[0]?.name, {currentPage: previousPage}, prefStorage, true)
+                        currentSearchToFetch,
+                        {currentPage: previousPage}, prefStorage, true)
                     // console.log(data)
                     // dispatch(setCachePosts(data));
                     // const signToken()
@@ -164,14 +176,11 @@ function Page(props) {
                             [previousPage]: {data, tags},
                         })
 
-                        console.log(cache, "cache data with previous page")
-                        const stringNextCache = signToken(cache)
-                        sessionStorage.setItem("c", stringNextCache)
-                        console.log(data.post.post.map((el) => el.id), "prev id")
-                        const dataPrevToCache = {prevIds: arrayId , currentIds: idsToPrev}
-                        console.log()
-
-
+                        // console.log(cache, "cache data with previous page")
+                        const stringPrevCache = signToken(cache)
+                        sessionStorage.setItem("c", stringPrevCache)
+                        // console.log(data.post.post.map((el) => el.id), "prev id")
+                        // const dataPrevToCache = {prevIds: arrayId , currentIds: idsToPrev}
                     }
 
 
@@ -179,9 +188,10 @@ function Page(props) {
                     const lastFetchedId = prevId[prevId.length - 1];
 
 
-                    console.log(prevId, lastFetchedId, "prev")
+                    // console.log(prevId, lastFetchedId, "prev")
 
                     if (lastFetchedId) {
+                        // console.log(data)
                         setLastId(lastFetchedId);
                     }
 
@@ -194,7 +204,9 @@ function Page(props) {
                 }
                 
                 let nextPage = Number(currentPageToFetch) + 1;
-                const {data, tags} = await FetchPosts(cachePost.search || relativeTags?.creator[0]?.name || relativeTags?.character[0]?.name, {currentPage: nextPage}, prefStorage, true);
+                const {data, tags} = await FetchPosts(
+                    currentSearchToFetch,
+                    {currentPage: nextPage}, prefStorage, true);
                 const checkCachePage = isPageCached(nextPage)
 
                 if (!checkCachePage) {
@@ -210,7 +222,7 @@ function Page(props) {
                 const nextId = data.post.map((el, i) => el.id)
                 if (nextId){
                 const nextFetchedId = nextId[0];
-                console.log(data, nextId, nextFetchedId, "masuk next page")
+                console.log(data, nextId, nextFetchedId, nextPage,"masuk next page")
                 setNextId(nextFetchedId);
                 }
             }
@@ -237,8 +249,12 @@ function Page(props) {
         if (cacheRaw && cacheIdRaw) {
         const cache = verifyToken(cacheRaw);
         const cacheId = verifyToken(cacheIdRaw);
-
+            console.log(cache, "log cache")
+            console.log(cacheId, "log cache");
         return {cache, cacheId}
+        } else {
+            return {cache: null, cacheId: null}
+            // setHideButton((prev) => ({...prev , next: true, prev: true}));
         }
     }
 
@@ -248,10 +264,6 @@ function Page(props) {
 
 
         if (cache && cacheId) {
-
-            console.log(cache, "cache");
-            console.log(cacheId, "cacheId");
-
             const ratingKey = prefStorage.rating; // e.g., "safe" or "nsfw"
             const searchKey = cacheId.search; // e.g., "character1" or "creator1"
 
@@ -261,25 +273,29 @@ function Page(props) {
 
 
                 const currentPagePost = searchCacheData.cache.find((el) => Number(Object.keys(el)) === Number(cacheId.currentPage));
-                console.log(cacheId.currentPage, "current Page")
-                console.log(searchCacheData, "currentPage");
+                // console.log(cacheId.currentPage, "current Page")
+                // console.log(searchCacheData, "currentPage");
                 
                 console.log(searchCacheData.cache.find((el) => Number(Object.keys(el)) === Number(cacheId.currentPage)), "currentPagePost");
-                
+
+                console.log(currentPagePost, "currentPagePost");
                 if (currentPagePost) {
                     const {data} = currentPagePost[cacheId.currentPage];
                     const arrayId = data.post.map((el) => el.id);
 
                     // Find the index of the current post in the arrayId
-                    console.log(arrayId, "arrayId");
+                    // console.log(arrayId, "arrayId");
                     const currentIndexCache = arrayId.indexOf(Number(params.id));
                     if (currentIndexCache === -1) {// cari dulu dari cache baru dimatiin tombol next/prev
                         console.log("masuk dulu")
-                        console.log(searchCacheData.cache.map((entry) => Object.keys(entry)), "pageKeys")
+                        const pageKeysFound = searchCacheData.cache.map((entry) => Object.keys(entry))
+                        // console.log(searchCacheData.cache.map((entry) => Object.keys(entry)).toString(), "pageKeys")
+                        console.log(pageKeysFound, "pageKeysFound");
 
                     }
                     console.log(currentIndexCache, "currentIndexCache");
                     // if (currentIndexCache !== -1) {
+                    console.log(arrayId, "arrayId");
                         setArrayId(arrayId);
                         setCurrentIndex(currentIndexCache); 
                         dispatch(setCachePost(cacheId))
@@ -310,10 +326,6 @@ function Page(props) {
         }
 
     }, [])
-
-    console.log(cachePosts, "cache post");
-    console.log(cachePost, "cache post search");
-
 
 
     // useEffect(() => {
@@ -369,13 +381,10 @@ function Page(props) {
                 if (lastId) {
                     const cacheId = sessionStorage.getItem("ci");
                     const cacheIdObj = verifyToken(cacheId);
-                    console.log(cacheIdObj, "cache id brr");
-                    console.log(cachePost, "cache id post");
                     const cache = {
-                        search: cacheId.search,
+                        search: cacheIdObj.search,
                         currentPage: cacheIdObj.currentPage <= 1 ? 1 : Number(cachePost.currentPage) - 1
                     };
-                    console.log(cache, "cache again");
                     const string = signToken(cache);
                     sessionStorage.setItem("ci", string);
                     router.push(`/post/${lastId}${s ? "?s=" + encodeURIComponent(s) : ""}`);

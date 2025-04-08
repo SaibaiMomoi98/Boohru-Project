@@ -105,7 +105,26 @@ const Page = () => {
 
                         await fetchPosts(); // Fetch new data if the page or search term has changed
                     } else {
-                        const {data: dataFetchCheck} = await FetchPosts(s, pagination, {
+
+                        const currentPageToCheck = () => {
+                            let pageToCheck = 0;
+                            if (pagination.currentPage === 1){
+                                return pageToCheck + 1;
+                            }
+                            for (let i = 1; i < pagination.currentPage; i++){
+                                pageToCheck += 20
+                            }
+                            return pageToCheck + 1
+                        }
+
+                        const paginationToCheck = {
+                            currentPage: currentPageToCheck(),
+                            totalPages: pagination.totalPages,
+                        }
+
+                        // console.log(pagination, paginationToCheck, currentPageToCheck(),"check data")
+
+                        const {data: dataFetchCheck} = await FetchPosts(s, paginationToCheck, {
                             limit: 1,
                             rating: prefStorage.rating
                         }, false);
@@ -114,21 +133,16 @@ const Page = () => {
                             if (data.status || tags.status || tags.creator.length === 0 || tags.character.length === 0 || data.post.length === 0) {
                                 sessionStorage.removeItem("c")
                             }
-                            console.log("masuk cache");
-                            console.log(dataFetchCheck, data.post[0], "check data")
-                            console.log(dataFetchCheck && !dataFetchCheck.status, "check data")
 
                             if (dataFetchCheck && !dataFetchCheck.status) {
-                                // console.log(dataFetchCheck?.post[0], data.post[0], "check data")
-                                // console.log(dataFetchCheck.post[0]?.id === data.post[0]?.id, "check data")
-                                if (dataFetchCheck.post[0]?.id !== data.post[0]?.id){
-                                    cache[ratingKey][searchKey].cache.push({
-                                        [cachePageKeys]: {}
-                                    })
-                                    const newCacheToken = signToken(cache);
-                                    sessionStorage.setItem("c", newCacheToken);
-                                    await fetchPosts()
+                                console.log(dataFetchCheck?.post[0], data.post[0], "check data")
+                                console.log(dataFetchCheck.post[0]?.id === data.post[0]?.id, "check data")
 
+                                if (dataFetchCheck.post[0]?.id !== data.post[0]?.id){
+                                    const [deleteCurrentPageCache] = cache[ratingKey][searchKey].cache.splice(cachePageKeys - 1, cachePageKeys)
+                                    const newCacheToken = signToken(cache);
+                                    sessionStorage.setItem("c", signToken(cache));
+                                    await fetchPosts()
                                 }else{
                                     setPosts(data);
                                     setRelativeTags(tags);
