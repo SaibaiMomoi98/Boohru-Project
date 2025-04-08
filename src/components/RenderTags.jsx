@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
+import {useRouter} from "next/navigation";
 
 export default function RenderTags({ relativeTags }) {
+    const router = useRouter()
     const [activeFilter, setActiveFilter] = useState(null);
     const [contextMenu, setContextMenu] = useState({
         show: false,
@@ -10,7 +12,6 @@ export default function RenderTags({ relativeTags }) {
     });
     const menuRef = useRef(null);
 
-    // Close menu when clicking outside
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (menuRef.current && !menuRef.current.contains(event.target)) {
@@ -21,7 +22,7 @@ export default function RenderTags({ relativeTags }) {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, [contextMenu]);
 
-    const renderTags = (tagsArray, colorClass) => {
+    const renderTags = (tagsArray, colorClass, selectedColor) => {
         return tagsArray.map((item, index) => (
             <div key={index} className="relative inline-block">
                 <button
@@ -33,7 +34,7 @@ export default function RenderTags({ relativeTags }) {
                             currentTag: item.name,
                         });
                     }}
-                    className={`h-[4vh] flex flex-row items-center rounded-lg p-1 text-center hover:cursor-pointer ${colorClass}`}
+                    className={`h-[4vh] flex flex-row items-center rounded-lg p-1 text-center hover:cursor-pointer ${contextMenu.show && contextMenu.currentTag === item.name ? selectedColor : colorClass}`}
                 >
                     <span className="text-[10px]">{item?.name.split("_").join(" ")}</span>
                 </button>
@@ -41,13 +42,17 @@ export default function RenderTags({ relativeTags }) {
         ));
     };
 
+    const handleChangePage = (tags) => {
+        // e.preventDefault();
+        router.push(`/post?s=${encodeURIComponent(tags)}&p=1`);
+    }
+
     const handleFilterClick = (filterType) => {
         setActiveFilter(activeFilter === filterType ? null : filterType);
-        setContextMenu({ ...contextMenu, show: false }); // Close menu when changing filter
+        setContextMenu({ ...contextMenu, show: false });
     };
 
     const handleSearchAction = (action) => {
-        // Implement your search logic here based on the action
         console.log(`${action} tag: ${contextMenu.currentTag}`);
         setContextMenu({ ...contextMenu, show: false });
     };
@@ -58,6 +63,13 @@ export default function RenderTags({ relativeTags }) {
         from: "bg-cyan-400 text-blue-900 hover:text-white hover:bg-cyan-600",
         genre: "bg-pink-400 text-pink-900 hover:text-white hover:bg-pink-600",
     };
+
+    const selectedColorClass = {
+        creator: "bg-green-600 text-white",
+        character: "text-white bg-red-600",
+        from: "text-white bg-cyan-600",
+        genre: "text-white bg-pink-600"
+    }
 
     return (
         <div className="flex flex-row max-md:justify-center flex-wrap gap-2">
@@ -109,7 +121,8 @@ export default function RenderTags({ relativeTags }) {
                 <>
                   {renderTags(
                       relativeTags[activeFilter].slice(0, 80),
-                      colorClasses[activeFilter]
+                      colorClasses[activeFilter],
+                      selectedColorClass[activeFilter],
                   )}
                 </>
             ) : (
@@ -117,7 +130,8 @@ export default function RenderTags({ relativeTags }) {
                     {Object.entries(relativeTags).map(([key, value]) =>
                         renderTags(
                             value.length > 35 ? value.slice(0, 35) : value,
-                            colorClasses[key]
+                            colorClasses[key],
+                            selectedColorClass[key],
                         )
                     )}
                 </>
@@ -133,9 +147,9 @@ export default function RenderTags({ relativeTags }) {
                         left: `${contextMenu.position.x}px`,
                     }}
                 >
-                    <div className="text-xs font-semibold mb-1 px-2 py-1">
+                    <button className="text-xs font-semibold mb-1 px-2 py-1" onClick={() => handleChangePage(contextMenu.currentTag)}>
                         {contextMenu.currentTag?.split("_").join(" ")}
-                    </div>
+                    </button>
                     <button
                         onClick={() => handleSearchAction("add")}
                         className="w-full text-left px-2 py-1 hover:bg-gray-100 rounded text-xs flex items-center"
